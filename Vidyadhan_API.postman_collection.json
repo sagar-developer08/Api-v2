@@ -1,0 +1,434 @@
+{
+	"info": {
+		"_postman_id": "vidyadhan-api-collection",
+		"name": "Vidyadhan API",
+		"description": "Complete API collection for Vidyadhan school registration system",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/health",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"health"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.token) {",
+									"        pm.environment.set(\"authToken\", jsonData.data.token);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@example.com\",\n  \"password\": \"password123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@example.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/forgot-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"forgot-password"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"token\": \"reset-token-from-email\",\n  \"password\": \"newpassword123\",\n  \"confirmPassword\": \"newpassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/reset-password",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"reset-password"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get Profile",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/profile",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"profile"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "School Registration",
+			"item": [
+				{
+					"name": "Step 1: Create School Details",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.schoolId) {",
+									"        pm.environment.set(\"schoolId\", jsonData.data.schoolId);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"schoolName\": \"Example High School\",\n  \"schoolCode\": \"EHS001\",\n  \"schoolType\": \"Higher Secondary\",\n  \"boardAffiliation\": \"CBSE\",\n  \"mediumOfInstruction\": \"English\",\n  \"academicYearStartMonth\": \"April\",\n  \"establishmentYear\": 1990\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/schools",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"schools"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Step 2: Update Address & Contact",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"addressLine1\": \"123 Main Street\",\n  \"addressLine2\": \"Near City Park\",\n  \"city\": \"Mumbai\",\n  \"district\": \"Mumbai\",\n  \"state\": \"Maharashtra\",\n  \"pincode\": \"400001\",\n  \"country\": \"India\",\n  \"timezone\": \"Asia/Kolkata\",\n  \"officialEmail\": \"info@examplehighschool.com\",\n  \"primaryPhoneNumber\": \"9876543210\",\n  \"alternatePhoneNumber\": \"9876543211\",\n  \"websiteURL\": \"https://www.examplehighschool.com\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/schools/{{schoolId}}/address-contact",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"schools",
+								"{{schoolId}}",
+								"address-contact"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Step 3: Create Admin Account",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 201) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.data && jsonData.data.token) {",
+									"        pm.environment.set(\"authToken\", jsonData.data.token);",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"adminFullName\": \"John Doe\",\n  \"adminEmail\": \"admin@examplehighschool.com\",\n  \"adminMobileNumber\": \"9876543210\",\n  \"password\": \"admin123456\",\n  \"confirmPassword\": \"admin123456\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/schools/{{schoolId}}/admin",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"schools",
+								"{{schoolId}}",
+								"admin"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Step 4: Update Legal & Setup",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"schoolRegistrationNumber\": \"REG123456\",\n  \"affiliationNumber\": \"AFF789012\",\n  \"udiseCode\": \"27270100101\",\n  \"gstNumber\": \"27AAAAA0000A1Z5\",\n  \"panNumber\": \"AAAAA0000A\",\n  \"trustSocietyName\": \"Example Education Trust\",\n  \"classesOffered\": \"1-12\",\n  \"streams\": \"Science, Commerce, Arts\",\n  \"sectionsPerClass\": \"A, B, C\",\n  \"gradingSystem\": \"Percentage\",\n  \"examPattern\": \"Annual\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/schools/{{schoolId}}/legal-setup",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"schools",
+								"{{schoolId}}",
+								"legal-setup"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Step 5: Update Modules & Plan",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"modules\": [\"Student Management\", \"Fee Management\", \"Exam Management\"],\n  \"plan\": \"Premium\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/schools/{{schoolId}}/modules-plan",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"schools",
+								"{{schoolId}}",
+								"modules-plan"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Get School Status",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{authToken}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/schools/{{schoolId}}/status",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"schools",
+								"{{schoolId}}",
+								"status"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "authToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "schoolId",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
