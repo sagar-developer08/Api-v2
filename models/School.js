@@ -186,8 +186,7 @@ const schoolSchema = new mongoose.Schema({
 });
 
 // Indexes for better query performance
-schoolSchema.index({ schoolCode: 1 });
-schoolSchema.index({ officialEmail: 1 });
+// Note: schoolCode and officialEmail already have unique indexes from unique: true
 schoolSchema.index({ adminId: 1 });
 
 module.exports = mongoose.model('School', schoolSchema);

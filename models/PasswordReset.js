@@ -33,8 +33,8 @@ passwordResetSchema.statics.generateToken = function() {
 };
 
 // Indexes
-passwordResetSchema.index({ token: 1 });
+// Note: token already has unique index from unique: true
+// Note: expiresAt already has TTL index from expires: 3600 option
 passwordResetSchema.index({ email: 1 });
-passwordResetSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 module.exports = mongoose.model('PasswordReset', passwordResetSchema);

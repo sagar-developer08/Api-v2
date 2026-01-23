@@ -63,8 +63,7 @@ adminSchema.methods.comparePassword = async function(candidatePassword) {
 };
 
 // Indexes
-adminSchema.index({ email: 1 });
-adminSchema.index({ mobileNumber: 1 });
+// Note: email and mobileNumber already have unique indexes from unique: true
 adminSchema.index({ schoolId: 1 });
 
 module.exports = mongoose.model('Admin', adminSchema);
