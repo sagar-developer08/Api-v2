@@ -23,6 +23,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
+  console.log('Health check endpoint hit');
   res.status(200).json({
     success: true,
     message: 'API is running',
