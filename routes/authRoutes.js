@@ -1,34 +1,37 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const registrationController = require('../controllers/registrationController');
+const { validateForgotPassword, validateResetPassword } = require('../validators/schoolValidators');
 const {
-  validateForgotPassword,
-  validateResetPassword
-} = require('../validators/schoolValidators');
+  validateRegister: validateRegisterSpec,
+  validateVerifyOtp: validateVerifyOtpSpec,
+  validateLogin: validateLoginSpec
+} = require('../validators/registrationValidators');
 const { handleValidationErrors } = require('../middleware/validation');
 const { protect } = require('../middleware/auth');
-const { body } = require('express-validator');
 
-// Login
+router.post(
+  '/register',
+  validateRegisterSpec,
+  handleValidationErrors,
+  registrationController.register
+);
+
+router.post(
+  '/verify-otp',
+  validateVerifyOtpSpec,
+  handleValidationErrors,
+  registrationController.verifyOtp
+);
+
 router.post(
   '/login',
-  [
-    body('email')
-      .trim()
-      .notEmpty()
-      .withMessage('Email is required')
-      .isEmail()
-      .withMessage('Please provide a valid email')
-      .normalizeEmail(),
-    body('password')
-      .notEmpty()
-      .withMessage('Password is required')
-  ],
+  validateLoginSpec,
   handleValidationErrors,
   authController.login
 );
 
-// Forgot Password
 router.post(
   '/forgot-password',
   validateForgotPassword,
@@ -36,7 +39,6 @@ router.post(
   authController.forgotPassword
 );
 
-// Reset Password
 router.post(
   '/reset-password',
   validateResetPassword,
@@ -44,11 +46,6 @@ router.post(
   authController.resetPassword
 );
 
-// Get current admin profile
-router.get(
-  '/profile',
-  protect,
-  authController.getProfile
-);
+router.get('/profile', protect, authController.getProfile);
 
 module.exports = router;

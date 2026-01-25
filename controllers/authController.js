@@ -1,23 +1,51 @@
 const Admin = require('../models/Admin');
+const School = require('../models/School');
 const PasswordReset = require('../models/PasswordReset');
 const { sendPasswordResetEmail } = require('../config/email');
 const generateToken = require('../utils/generateToken');
 
-// Login
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { schoolCode, email, password } = req.body;
 
-    // Check if admin exists
-    const admin = await Admin.findOne({ email: email.toLowerCase() }).select('+password');
-    if (!admin) {
+    const school = await School.findOne({
+      schoolCode: (schoolCode || '').toString().trim().toUpperCase()
+    });
+    if (!school) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Invalid school code or credentials'
       });
     }
 
-    // Check if admin is active
+    if (school.status !== 'Approved') {
+      const msg =
+        school.status === 'Pending Setup'
+          ? 'Please complete the Setup Wizard first.'
+          : school.status === 'Pending Admin Approval'
+            ? 'Your school is awaiting admin approval. You will be notified once approved.'
+            : school.status === 'Rejected'
+              ? 'Your school registration was rejected. Please contact support.'
+              : 'Login not allowed for your school at this time.';
+      return res.status(403).json({
+        success: false,
+        message: msg,
+        status: school.status
+      });
+    }
+
+    const admin = await Admin.findOne({
+      email: (email || '').toLowerCase().trim(),
+      schoolId: school._id
+    }).select('+password');
+
+    if (!admin) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid school code or credentials'
+      });
+    }
+
     if (!admin.isActive) {
       return res.status(401).json({
         success: false,
@@ -25,20 +53,17 @@ exports.login = async (req, res) => {
       });
     }
 
-    // Check password
     const isMatch = await admin.comparePassword(password);
     if (!isMatch) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid credentials'
+        message: 'Invalid school code or credentials'
       });
     }
 
-    // Update last login
     admin.lastLogin = new Date();
-    await admin.save();
+    await admin.save({ validateBeforeSave: false });
 
-    // Generate token
     const token = generateToken(admin._id);
 
     res.status(200).json({
@@ -49,7 +74,10 @@ exports.login = async (req, res) => {
           id: admin._id,
           fullName: admin.fullName,
           email: admin.email,
-          mobileNumber: admin.mobileNumber
+          mobileNumber: admin.mobileNumber,
+          schoolCode: school.schoolCode,
+          schoolId: school._id,
+          schoolName: school.schoolName
         },
         token
       }
@@ -57,40 +85,32 @@ exports.login = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: 'Error during login',
+      message: 'Login failed',
       error: error.message
     });
   }
 };
 
-// Forgot Password
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
-    // Check if admin exists
     const admin = await Admin.findOne({ email: email.toLowerCase() });
     if (!admin) {
-      // Don't reveal if email exists or not for security
       return res.status(200).json({
         success: true,
         message: 'If the email exists, a password reset link has been sent'
       });
     }
 
-    // Generate reset token
     const resetToken = PasswordReset.generateToken();
-
-    // Save reset token
     await PasswordReset.create({
       email: email.toLowerCase(),
       token: resetToken,
-      expiresAt: new Date(Date.now() + 3600000) // 1 hour
+      expiresAt: new Date(Date.now() + 3600000)
     });
 
-    // Send email
     const emailSent = await sendPasswordResetEmail(email, resetToken);
-
     if (!emailSent) {
       return res.status(500).json({
         success: false,
@@ -111,12 +131,10 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// Reset Password
 exports.resetPassword = async (req, res) => {
   try {
     const { token, password } = req.body;
 
-    // Find valid reset token
     const passwordReset = await PasswordReset.findOne({
       token,
       used: false,
@@ -130,7 +148,6 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    // Find admin
     const admin = await Admin.findOne({ email: passwordReset.email });
     if (!admin) {
       return res.status(404).json({
@@ -139,11 +156,9 @@ exports.resetPassword = async (req, res) => {
       });
     }
 
-    // Update password
     admin.password = password;
     await admin.save();
 
-    // Mark token as used
     passwordReset.used = true;
     await passwordReset.save();
 
@@ -160,12 +175,18 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
-// Get current admin profile
 exports.getProfile = async (req, res) => {
   try {
     const admin = await Admin.findById(req.admin._id)
       .select('-password')
-      .populate('schoolId', 'schoolName schoolCode');
+      .populate('schoolId', 'schoolName schoolCode status');
+
+    if (!admin) {
+      return res.status(404).json({
+        success: false,
+        message: 'Admin not found'
+      });
+    }
 
     res.status(200).json({
       success: true,

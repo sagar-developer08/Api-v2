@@ -18,8 +18,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use('/api/schools', require('./routes/schoolRoutes'));
 app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/schools', require('./routes/schoolRoutes'));
+app.use('/api/super-admin', require('./routes/superAdminRoutes'));
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

@@ -1,60 +1,48 @@
 const express = require('express');
 const router = express.Router();
-const schoolController = require('../controllers/schoolController');
+const setupWizardController = require('../controllers/setupWizardController');
 const {
-  validateSchoolDetails,
-  validateAddressContact,
-  validateAdminAccount,
-  validateLegalSetup
-} = require('../validators/schoolValidators');
+  validateStep1,
+  validateStep2,
+  validateStep3
+} = require('../validators/setupWizardValidators');
 const { handleValidationErrors } = require('../middleware/validation');
 const { protect } = require('../middleware/auth');
 
-// Step 1: Create School - School Details
-router.post(
-  '/',
-  validateSchoolDetails,
-  handleValidationErrors,
-  schoolController.createSchoolDetails
-);
-
-// Step 2: Update Address & Contact
-router.put(
-  '/:schoolId/address-contact',
-  validateAddressContact,
-  handleValidationErrors,
-  schoolController.updateAddressContact
-);
-
-// Step 3: Create Admin Account
-router.post(
-  '/:schoolId/admin',
-  validateAdminAccount,
-  handleValidationErrors,
-  schoolController.createAdminAccount
-);
-
-// Step 4: Update Legal & Setup
-router.put(
-  '/:schoolId/legal-setup',
-  protect,
-  validateLegalSetup,
-  handleValidationErrors,
-  schoolController.updateLegalSetup
-);
-
-// Step 5: Update Modules & Plan
-router.put(
-  '/:schoolId/modules-plan',
-  protect,
-  schoolController.updateModulesPlan
-);
-
-// Get school registration status
 router.get(
-  '/:schoolId/status',
+  '/:schoolId/setup-wizard',
   protect,
-  schoolController.getSchoolStatus
+  setupWizardController.getSetupWizard
+);
+
+router.put(
+  '/:schoolId/setup-wizard/step/1',
+  protect,
+  validateStep1,
+  handleValidationErrors,
+  setupWizardController.step1BasicInfo
+);
+
+router.put(
+  '/:schoolId/setup-wizard/step/2',
+  protect,
+  validateStep2,
+  handleValidationErrors,
+  setupWizardController.step2AcademicStructure
+);
+
+router.put(
+  '/:schoolId/setup-wizard/step/3',
+  protect,
+  validateStep3,
+  handleValidationErrors,
+  setupWizardController.step3BranchSetup
+);
+
+router.post(
+  '/:schoolId/setup-wizard/finish',
+  protect,
+  setupWizardController.finishSetup
 );
 
 module.exports = router;

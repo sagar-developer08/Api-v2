@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 
+const SCHOOL_STATUS = ['Pending Setup', 'Pending Admin Approval', 'Approved', 'Rejected'];
+
 const schoolSchema = new mongoose.Schema({
-  // Step 1: School Details
   schoolName: {
     type: String,
     required: true,
@@ -14,180 +15,51 @@ const schoolSchema = new mongoose.Schema({
     trim: true,
     uppercase: true
   },
-  schoolType: {
+  status: {
     type: String,
     required: true,
-    enum: ['Primary', 'Secondary', 'Higher Secondary', 'Composite']
+    enum: SCHOOL_STATUS,
+    default: 'Pending Setup'
   },
-  boardAffiliation: {
-    type: String,
-    required: true,
-    enum: ['CBSE', 'ICSE', 'State Board', 'IB', 'IGCSE', 'Other']
-  },
-  mediumOfInstruction: {
-    type: String,
-    required: true,
-    enum: ['English', 'Hindi', 'Regional', 'Bilingual']
-  },
-  academicYearStartMonth: {
-    type: String,
-    required: true,
-    enum: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
-  },
-  establishmentYear: {
+  setupWizardStep: {
     type: Number,
-    required: true,
-    min: 1800,
-    max: new Date().getFullYear()
+    default: 1,
+    min: 1,
+    max: 4
   },
-
-  // Step 2: Address & Contact
-  addressLine1: {
-    type: String,
-    required: true,
-    trim: true
+  setupLocked: {
+    type: Boolean,
+    default: false
   },
-  addressLine2: {
-    type: String,
-    trim: true
-  },
-  city: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  district: {
-    type: String,
-    trim: true
-  },
-  state: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  pincode: {
-    type: String,
-    required: true,
-    trim: true,
-    match: /^[0-9]{6}$/
-  },
-  country: {
-    type: String,
-    required: true,
-    default: 'India'
-  },
-  timezone: {
-    type: String,
-    default: 'Asia/Kolkata'
-  },
-  officialEmail: {
-    type: String,
-    required: true,
-    unique: true,
-    lowercase: true,
-    trim: true,
-    match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email']
-  },
-  primaryPhoneNumber: {
-    type: String,
-    required: true,
-    trim: true
-  },
-  alternatePhoneNumber: {
-    type: String,
-    trim: true
-  },
-  websiteURL: {
-    type: String,
-    trim: true,
-    match: [/^https?:\/\/.+/, 'Please provide a valid URL']
-  },
-
-  // Step 3: Admin Account (reference to Admin model)
   adminId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Admin'
   },
 
-  // Step 4: Legal & Setup
-  schoolRegistrationNumber: {
+  // Step 1 – Basic Information
+  schoolType: {
     type: String,
-    trim: true
+    enum: ['School', 'College', 'Institute', ''],
+    default: ''
   },
-  affiliationNumber: {
-    type: String,
-    trim: true
-  },
-  udiseCode: {
-    type: String,
-    trim: true
-  },
-  gstNumber: {
+  boardCurriculum: {
     type: String,
     trim: true,
-    uppercase: true
+    default: ''
   },
-  panNumber: {
+  country: { type: String, trim: true, default: 'India' },
+  state: { type: String, trim: true, default: '' },
+  city: { type: String, trim: true, default: '' },
+  timezone: { type: String, trim: true, default: 'Asia/Kolkata' },
+  academicYearStartMonth: {
     type: String,
-    trim: true,
-    uppercase: true
-  },
-  trustSocietyName: {
-    type: String,
-    trim: true
-  },
-  classesOffered: {
-    type: String,
-    trim: true
-  },
-  streams: {
-    type: String,
-    trim: true
-  },
-  sectionsPerClass: {
-    type: String,
-    trim: true
-  },
-  gradingSystem: {
-    type: String,
-    enum: ['Percentage', 'GPA', 'CGPA', 'Letter Grade', 'Other']
-  },
-  examPattern: {
-    type: String,
-    enum: ['Annual', 'Semester', 'Quarterly', 'Continuous', 'Other']
-  },
-
-  // Step 5: Modules & Plan (can be added later)
-  modules: [{
-    type: String
-  }],
-  plan: {
-    type: String,
-    enum: ['Basic', 'Standard', 'Premium', 'Enterprise']
-  },
-
-  // Registration Status
-  registrationStep: {
-    type: Number,
-    default: 1,
-    min: 1,
-    max: 5
-  },
-  isRegistrationComplete: {
-    type: Boolean,
-    default: false
-  },
-  isActive: {
-    type: Boolean,
-    default: false
+    enum: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December', ''],
+    default: ''
   }
-}, {
-  timestamps: true
-});
+}, { timestamps: true });
 
-// Indexes for better query performance
-// Note: schoolCode and officialEmail already have unique indexes from unique: true
+schoolSchema.index({ status: 1 });
 schoolSchema.index({ adminId: 1 });
 
 module.exports = mongoose.model('School', schoolSchema);
-
+module.exports.SCHOOL_STATUS = SCHOOL_STATUS;

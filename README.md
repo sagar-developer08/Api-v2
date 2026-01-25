@@ -1,269 +1,245 @@
-# Vidyadhyayan School Registration API
+# School SaaS – Registration, Setup & Access API
 
-A comprehensive Node.js API for managing multi-step school registration process for the Vidyadhyayan platform.
+Node.js API implementing the **School SaaS – Registration, Setup & Access Flow** specification: registration with OTP verification, setup wizard, admin approval, and login with School Code + Email + Password.
 
 ## Features
 
-- **Multi-step School Registration:**
-  - Step 1: School Details
-  - Step 2: Address & Contact
-  - Step 3: Admin Account Creation
-  - Step 4: Legal & Setup
-  - Step 5: Modules & Plan
-
-- **Authentication:**
-  - JWT-based authentication
-  - Password hashing with bcrypt
-  - Protected routes
-
-- **Password Reset:**
-  - Forgot password functionality
-  - Email-based password reset with secure tokens
-  - Token expiration (1 hour)
-
-- **Data Validation:**
-  - Comprehensive input validation
-  - Email format validation
-  - Phone number validation
-  - GST and PAN number format validation
+- **School Registration**: School name, admin name, mobile, email, password → OTP (email) → verify → School created (Pending Setup), unique School Code generated
+- **Setup Wizard** (4 steps, progress saved): Basic Info → Academic Structure → Branch Setup → Review & Finish → status **Pending Admin Approval**, setup locked
+- **Super Admin Approval**: List schools, view details, approve or reject
+- **Login**: School Code + Email + Password; allowed only when status = **Approved**
+- **Dashboard-style access**: Status-based access; profile and setup wizard available to school admin
 
 ## Tech Stack
 
-- **Node.js** - Runtime environment
-- **Express.js** - Web framework
-- **MongoDB** - Database
-- **Mongoose** - ODM
-- **JWT** - Authentication
-- **bcryptjs** - Password hashing
-- **express-validator** - Input validation
-- **nodemailer** - Email service
-- **dotenv** - Environment variables
+- **Node.js**, **Express**, **MongoDB** (Mongoose), **JWT**, **bcryptjs**, **express-validator**, **nodemailer**, **dotenv**
 
-## Installation
+## Setup
 
-1. Clone the repository:
-```bash
-git clone <repository-url>
-cd vidhyadhan
-```
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-2. Install dependencies:
-```bash
-npm install
-```
+2. **Environment**
+   - Copy `.env.example` to `.env` and fill in values.
+   - Required: `MONGODB_URI`, `JWT_SECRET`, `PORT`.
+   - For OTP and password reset: `EMAIL_*`, `FRONTEND_URL`.
 
-3. Create a `.env` file in the root directory:
-```env
-PORT=3000
-NODE_ENV=development
-MONGODB_URI=mongodb://localhost:27017/vidhyadhan
-JWT_SECRET=your_super_secret_jwt_key_change_this_in_production
-JWT_EXPIRE=7d
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_app_password
-EMAIL_FROM=noreply@vidhyadhan.com
-FRONTEND_URL=http://localhost:3000
-```
+3. **Seed Super Admin** (for approval flow)
+   ```bash
+   npm run seed:superadmin
+   ```
+   Uses `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` from `.env`, or defaults.
 
-4. Start the server:
-```bash
-# Development mode (with nodemon)
-npm run dev
-
-# Production mode
-npm start
-```
+4. **Run**
+   ```bash
+   npm run dev   # development
+   npm start     # production
+   ```
 
 ## API Endpoints
 
-### School Registration
+Base URL: `http://localhost:3000` (or your `PORT`).
 
-#### Step 1: Create School Details
-```
-POST /api/schools
-Content-Type: application/json
+### 1. Registration & OTP
 
+**Register (send OTP)**  
+`POST /api/auth/register`
+
+```json
 {
-  "schoolName": "Greenwood High School",
-  "schoolCode": "GHS001",
-  "schoolType": "Higher Secondary",
-  "boardAffiliation": "CBSE",
-  "mediumOfInstruction": "English",
-  "academicYearStartMonth": "April",
-  "establishmentYear": 1995
+  "schoolName": "Demo School",
+  "adminName": "John Doe",
+  "mobileNumber": "9876543210",
+  "email": "admin@demoschool.com",
+  "password": "SecurePass1",
+  "confirmPassword": "SecurePass1"
 }
 ```
 
-#### Step 2: Update Address & Contact
-```
-PUT /api/schools/:schoolId/address-contact
-Content-Type: application/json
+- Password: min 8 chars, at least one letter and one number.
+- Email and mobile must be unique.
+- Responds with `email`, `mobileNumber`, `expiresAt`. OTP is sent to email.
 
+**Verify OTP & complete registration**  
+`POST /api/auth/verify-otp`
+
+```json
 {
-  "addressLine1": "123 Main Street",
-  "addressLine2": "Near Park",
-  "city": "Mumbai",
-  "district": "Mumbai",
-  "state": "Maharashtra",
-  "pincode": "400001",
+  "email": "admin@demoschool.com",
+  "otp": "123456",
+  "schoolName": "Demo School",
+  "adminName": "John Doe",
+  "mobileNumber": "9876543210",
+  "password": "SecurePass1"
+}
+```
+
+- On success: creates School (status **Pending Setup**), Admin, generates **School Code**. Returns `token`, `schoolId`, `schoolCode`, `admin`. Use token for Setup Wizard.
+
+---
+
+### 2. Login (School Admin)
+
+**Login**  
+`POST /api/auth/login`
+
+```json
+{
+  "schoolCode": "XXXXXXXX",
+  "email": "admin@demoschool.com",
+  "password": "SecurePass1"
+}
+```
+
+- Allowed only if school **status = Approved**.
+- Otherwise returns `403` with a message (e.g. complete setup, awaiting approval, rejected).
+
+---
+
+### 3. Setup Wizard
+
+All wizard routes require `Authorization: Bearer <token>` (school admin token from register or login).  
+`schoolId` is the same as returned after verify-otp.
+
+**Get wizard state**  
+`GET /api/schools/:schoolId/setup-wizard`
+
+Returns current step, saved data, and related `academicYears`, `classes`, `sections`, `branches`. After finish, same URL returns read-only summary.
+
+**Step 1 – Basic Information**  
+`PUT /api/schools/:schoolId/setup-wizard/step/1`
+
+```json
+{
+  "schoolName": "Demo School",
+  "schoolType": "School",
+  "boardCurriculum": "CBSE",
   "country": "India",
+  "state": "Maharashtra",
+  "city": "Mumbai",
   "timezone": "Asia/Kolkata",
-  "officialEmail": "info@greenwood.edu",
-  "primaryPhoneNumber": "9876543210",
-  "alternatePhoneNumber": "9876543211",
-  "websiteURL": "https://greenwood.edu"
+  "academicYearStartMonth": "June"
 }
 ```
 
-#### Step 3: Create Admin Account
-```
-POST /api/schools/:schoolId/admin
-Content-Type: application/json
+**Step 2 – Academic Structure**  
+`PUT /api/schools/:schoolId/setup-wizard/step/2`
 
-{
-  "adminFullName": "John Doe",
-  "adminEmail": "admin@greenwood.edu",
-  "adminMobileNumber": "9876543210",
-  "password": "password123",
-  "confirmPassword": "password123"
-}
-```
-
-#### Step 4: Update Legal & Setup
-```
-PUT /api/schools/:schoolId/legal-setup
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "schoolRegistrationNumber": "REG123456",
-  "affiliationNumber": "AFF789012",
-  "udiseCode": "UDISE123",
-  "gstNumber": "27ABCDE1234F1Z5",
-  "panNumber": "ABCDE1234F",
-  "trustSocietyName": "Greenwood Trust",
-  "classesOffered": "Pre-Primary to Class XII",
-  "streams": "Science, Commerce, Arts",
-  "sectionsPerClass": "A,B,C",
-  "gradingSystem": "Percentage",
-  "examPattern": "Annual"
-}
-```
-
-#### Step 5: Update Modules & Plan
-```
-PUT /api/schools/:schoolId/modules-plan
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "modules": ["Student Management", "Fee Management", "Attendance"],
-  "plan": "Premium"
-}
-```
-
-#### Get School Status
-```
-GET /api/schools/:schoolId/status
-Authorization: Bearer <token>
-```
-
-### Authentication
-
-#### Login
-```
-POST /api/auth/login
-Content-Type: application/json
-
-{
-  "email": "admin@greenwood.edu",
-  "password": "password123"
-}
-```
-
-#### Forgot Password
-```
-POST /api/auth/forgot-password
-Content-Type: application/json
-
-{
-  "email": "admin@greenwood.edu"
-}
-```
-
-#### Reset Password
-```
-POST /api/auth/reset-password
-Content-Type: application/json
-
-{
-  "token": "reset_token_from_email",
-  "password": "newpassword123",
-  "confirmPassword": "newpassword123"
-}
-```
-
-#### Get Profile
-```
-GET /api/auth/profile
-Authorization: Bearer <token>
-```
-
-## Response Format
-
-### Success Response
 ```json
 {
-  "success": true,
-  "message": "Operation successful",
-  "data": { ... }
+  "academicYear": "2026-2027",
+  "classesOffered": ["Pre-KG", "LKG", "UKG", "Class 1", "Class 2"],
+  "defaultSections": ["A", "B", "C"]
 }
 ```
 
-### Error Response
+- `classesOffered`: subset of Pre-KG … Class 12.
+- `defaultSections`: optional.
+
+**Step 3 – Branch Setup**  
+`PUT /api/schools/:schoolId/setup-wizard/step/3`
+
 ```json
 {
-  "success": false,
-  "message": "Error message",
-  "errors": [ ... ] // For validation errors
+  "mainBranchName": "Demo School Main",
+  "branchCity": "Mumbai"
 }
 ```
 
-## Database Models
+- At least one branch (main) is required before finish.
 
-### School
-- School details, address, contact, legal information
-- Registration step tracking
-- Admin reference
+**Step 4 – Review & Finish**  
+`POST /api/schools/:schoolId/setup-wizard/finish`
 
-### Admin
-- Admin account information
-- Password (hashed)
-- School reference
+- No body. Sets status to **Pending Admin Approval** and locks setup.
 
-### PasswordReset
-- Reset tokens
-- Email association
-- Expiration tracking
+---
 
-## Security Features
+### 4. Super Admin
 
-- Password hashing with bcrypt
-- JWT token authentication
-- Input validation and sanitization
-- Secure password reset tokens
-- Email verification for password reset
+**Login**  
+`POST /api/super-admin/login`
 
-## Development
+```json
+{
+  "email": "superadmin@schoolsaas.com",
+  "password": "SuperAdmin123!"
+}
+```
 
-The API uses:
-- Express.js for routing
-- Mongoose for database operations
-- express-validator for validation
-- JWT for authentication
-- Nodemailer for email services
+Returns `token` (use as `Authorization: Bearer <token>` for below).
+
+**List schools**  
+`GET /api/super-admin/schools?status=Pending Admin Approval`
+
+**Get school details**  
+`GET /api/super-admin/schools/:schoolId`
+
+**Approve school**  
+`POST /api/super-admin/schools/:schoolId/approve`
+
+```json
+{ "remarks": "Optional" }
+```
+
+**Reject school**  
+`POST /api/super-admin/schools/:schoolId/reject`
+
+```json
+{ "remarks": "Optional" }
+```
+
+---
+
+### 5. Other Auth
+
+**Profile**  
+`GET /api/auth/profile`  
+`Authorization: Bearer <token>`
+
+**Forgot password**  
+`POST /api/auth/forgot-password`  
+Body: `{ "email": "..." }`
+
+**Reset password**  
+`POST /api/auth/reset-password`  
+Body: `{ "token": "...", "password": "...", "confirmPassword": "..." }`
+
+---
+
+### 6. Health
+
+`GET /api/health`
+
+---
+
+## Status Flow
+
+| Status                 | Description                                      |
+|------------------------|--------------------------------------------------|
+| Pending Setup          | Registered; setup wizard not finished            |
+| Pending Admin Approval | Setup complete; waiting for super admin          |
+| Approved               | Can login (School Code + Email + Password)       |
+| Rejected               | Access blocked                                  |
+
+## Database Models (high-level)
+
+- **School**: status, setup step, locked, basic info, `adminId`, `schoolCode`
+- **Admin**: school admin; `schoolId`, email, mobile, password, verification flags
+- **SuperAdmin**: platform super admin
+- **AcademicYear**, **Class**, **Section**, **Branch**: setup wizard data
+- **ApprovalLog**: approval/reject actions
+- **OTPVerification**: registration OTP
+- **PasswordReset**: forgot-password tokens
+
+## Security
+
+- Passwords hashed with bcrypt.
+- JWT for school admin and super admin (role in payload).
+- Status-based access: login only when Approved; setup wizard only for own school.
+- Input validation via express-validator.
 
 ## License
 
