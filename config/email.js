@@ -8,7 +8,7 @@ const createTransporter = () => {
   const pass = process.env.SMTP_PASSWORD || process.env.EMAIL_PASS;
   const from = process.env.SMTP_FROM || process.env.EMAIL_FROM || user;
 
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     host,
     port,
     secure,
