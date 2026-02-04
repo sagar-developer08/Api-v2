@@ -20,11 +20,11 @@ function parseAcademicYearLabel(label) {
 exports.getSetupWizard = async (req, res) => {
   try {
     const school = await School.findById(req.params.schoolId)
-      .select('schoolName schoolCode status setupWizardStep setupLocked schoolType boardCurriculum country state city timezone academicYearStartMonth');
+      .select('schoolName schoolCode status setupWizardStep setupLocked isSetup schoolType boardCurriculum country state city timezone academicYearStartMonth adminId');
     if (!school) {
       return res.status(404).json({ success: false, message: 'School not found' });
     }
-    if (school.adminId?.toString() !== req.admin._id.toString()) {
+    if (req.admin.schoolId.toString() !== school._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized to access this school' });
     }
     if (school.setupLocked) {
@@ -77,7 +77,7 @@ exports.step1BasicInfo = async (req, res) => {
   try {
     const school = await School.findById(req.params.schoolId);
     if (!school) return res.status(404).json({ success: false, message: 'School not found' });
-    if (school.adminId?.toString() !== req.admin._id.toString()) {
+    if (req.admin.schoolId.toString() !== school._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
     if (school.setupLocked) {
@@ -124,7 +124,7 @@ exports.step2AcademicStructure = async (req, res) => {
   try {
     const school = await School.findById(req.params.schoolId);
     if (!school) return res.status(404).json({ success: false, message: 'School not found' });
-    if (school.adminId?.toString() !== req.admin._id.toString()) {
+    if (req.admin.schoolId.toString() !== school._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
     if (school.setupLocked) {
@@ -189,30 +189,66 @@ exports.step3BranchSetup = async (req, res) => {
   try {
     const school = await School.findById(req.params.schoolId);
     if (!school) return res.status(404).json({ success: false, message: 'School not found' });
-    if (school.adminId?.toString() !== req.admin._id.toString()) {
+    if (req.admin.schoolId.toString() !== school._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
     if (school.setupLocked) {
       return res.status(400).json({ success: false, message: 'Setup is locked' });
     }
 
-    const { mainBranchName, branchCity } = req.body;
-    const name = (mainBranchName !== undefined ? String(mainBranchName).trim() : null) || school.schoolName;
-    const city = branchCity !== undefined ? String(branchCity || '').trim() : '';
-
-    let main = await Branch.findOne({ schoolId: school._id, isMain: true });
-    if (main) {
-      main.name = name;
-      main.city = city;
-      await main.save();
-    } else {
-      await Branch.create({
-        schoolId: school._id,
-        name,
-        city,
-        isMain: true
-      });
+    const { branches } = req.body;
+    
+    // Validate that at least one branch is marked as main, or if not, use the first one
+    if (!branches || !Array.isArray(branches) || branches.length === 0) {
+      return res.status(400).json({ success: false, message: 'Please provide at least one branch in "branches" array' });
     }
+
+    // Prepare branches for insertion.
+    // Logic: 
+    // 1. Delete all existing branches for this school.
+    // 2. Insert new ones.
+    // Ensure exactly one main branch. Prioritize user input "isMain": true. 
+    // If multiple are main, pick first. If none, pick first index.
+
+    let hasMain = branches.find(b => b.isMain === true);
+    
+    const toCreate = branches.map((b, index) => {
+      let isMain = false;
+      if (hasMain) {
+        if (b === hasMain) isMain = true; // Use reference equality from find
+        // Wait, reference equality might fail if body is parsed fresh? find returns one of them.
+        // Safer:
+      } else {
+        if (index === 0) isMain = true;
+      }
+      return {
+        schoolId: school._id,
+        name: b.name.trim(),
+        city: (b.city || '').trim(),
+        isMain: b.isMain === true || (!hasMain && index === 0) // If user marked this true, or if no main existed and this is first
+      };
+    });
+
+    // Fix double mains just in case logic above was loose (it's not, but let's be strict):
+    // Actually, simply:
+    const finalBranches = [];
+    let mainFound = false;
+    for (const b of branches) {
+        const isMain = b.isMain === true;
+        if (isMain && !mainFound) {
+            mainFound = true;
+            finalBranches.push({ schoolId: school._id, name: b.name.trim(), city: (b.city || '').trim(), isMain: true });
+        } else {
+            finalBranches.push({ schoolId: school._id, name: b.name.trim(), city: (b.city || '').trim(), isMain: false });
+        }
+    }
+    // If none marked main so far, make the first one main
+    if (!mainFound && finalBranches.length > 0) {
+        finalBranches[0].isMain = true;
+    }
+
+    await Branch.deleteMany({ schoolId: school._id });
+    await Branch.insertMany(finalBranches);
 
     school.setupWizardStep = Math.max(school.setupWizardStep, 3);
     await school.save();
@@ -235,7 +271,7 @@ exports.finishSetup = async (req, res) => {
   try {
     const school = await School.findById(req.params.schoolId);
     if (!school) return res.status(404).json({ success: false, message: 'School not found' });
-    if (school.adminId?.toString() !== req.admin._id.toString()) {
+    if (req.admin.schoolId.toString() !== school._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
     }
     if (school.setupLocked) {
@@ -253,6 +289,7 @@ exports.finishSetup = async (req, res) => {
     school.status = 'Pending Admin Approval';
     school.setupWizardStep = 4;
     school.setupLocked = true;
+    school.isSetup = true;
     await school.save();
 
     res.status(200).json({
@@ -260,7 +297,8 @@ exports.finishSetup = async (req, res) => {
       message: 'Setup submitted. Waiting for admin approval.',
       data: {
         schoolId: school._id,
-        status: school.status
+        status: school.status,
+        isSetup: school.isSetup
       }
     });
   } catch (error) {

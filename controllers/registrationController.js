@@ -93,7 +93,8 @@ exports.verifyOtp = async (req, res) => {
       schoolName: schoolName.trim(),
       schoolCode,
       status: 'Pending Setup',
-      setupWizardStep: 1
+      setupWizardStep: 1,
+      isSetup: false
     });
 
     const admin = await Admin.create({
@@ -118,6 +119,7 @@ exports.verifyOtp = async (req, res) => {
         schoolId: school._id,
         schoolCode: school.schoolCode,
         schoolName: school.schoolName,
+        isSetup: school.isSetup,
         admin: {
           id: admin._id,
           fullName: admin.fullName,

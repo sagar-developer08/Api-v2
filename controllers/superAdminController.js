@@ -53,7 +53,7 @@ exports.listSchools = async (req, res) => {
     const filter = {};
     if (status) filter.status = status;
     const schools = await School.find(filter)
-      .select('schoolName schoolCode status setupWizardStep setupLocked createdAt')
+      .select('schoolName schoolCode status setupWizardStep setupLocked isSetup createdAt')
       .populate('adminId', 'fullName email mobileNumber')
       .sort({ createdAt: -1 })
       .lean();

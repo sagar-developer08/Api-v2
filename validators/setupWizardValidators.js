@@ -70,12 +70,19 @@ exports.validateStep2 = [
 ];
 
 exports.validateStep3 = [
-  body('mainBranchName')
-    .optional()
+  body('branches')
+    .isArray()
+    .withMessage('branches must be an array of objects with name, city, and isMain'),
+  body('branches.*.name')
+    .notEmpty()
+    .withMessage('Branch name is required')
     .trim()
     .isLength({ max: 200 }),
-  body('branchCity')
+  body('branches.*.city')
     .optional()
     .trim()
-    .isLength({ max: 100 })
+    .isLength({ max: 100 }),
+  body('branches.*.isMain')
+    .optional()
+    .isBoolean()
 ];
