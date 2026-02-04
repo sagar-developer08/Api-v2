@@ -18,15 +18,13 @@ exports.login = async (req, res) => {
       });
     }
 
-    if (school.status !== 'Approved') {
+    if (school.status !== 'Approved' && school.status !== 'Pending Setup') {
       const msg =
-        school.status === 'Pending Setup'
-          ? 'Please complete the Setup Wizard first.'
-          : school.status === 'Pending Admin Approval'
-            ? 'Your school is awaiting admin approval. You will be notified once approved.'
-            : school.status === 'Rejected'
-              ? 'Your school registration was rejected. Please contact support.'
-              : 'Login not allowed for your school at this time.';
+        school.status === 'Pending Admin Approval'
+          ? 'Your school is awaiting admin approval. You will be notified once approved.'
+          : school.status === 'Rejected'
+            ? 'Your school registration was rejected. Please contact support.'
+            : 'Login not allowed for your school at this time.';
       return res.status(403).json({
         success: false,
         message: msg,
@@ -77,7 +75,8 @@ exports.login = async (req, res) => {
           mobileNumber: admin.mobileNumber,
           schoolCode: school.schoolCode,
           schoolId: school._id,
-          schoolName: school.schoolName
+          schoolName: school.schoolName,
+          isSetup: school.isSetup
         },
         token
       }

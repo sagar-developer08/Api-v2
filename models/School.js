@@ -31,6 +31,10 @@ const schoolSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
+  isSetup: {
+    type: Boolean,
+    default: false
+  },
   adminId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Admin'

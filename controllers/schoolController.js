@@ -41,7 +41,8 @@ exports.createSchoolDetails = async (req, res) => {
       message: 'School details saved successfully',
       data: {
         schoolId: school._id,
-        registrationStep: school.registrationStep
+        registrationStep: school.registrationStep,
+        isSetup: school.isSetup
       }
     });
   } catch (error) {
@@ -118,7 +119,8 @@ exports.updateAddressContact = async (req, res) => {
       message: 'Address and contact details saved successfully',
       data: {
         schoolId: school._id,
-        registrationStep: school.registrationStep
+        registrationStep: school.registrationStep,
+        isSetup: school.isSetup
       }
     });
   } catch (error) {
@@ -197,6 +199,7 @@ exports.createAdminAccount = async (req, res) => {
         },
         schoolId: school._id,
         registrationStep: school.registrationStep,
+        isSetup: school.isSetup,
         token
       }
     });
@@ -258,7 +261,8 @@ exports.updateLegalSetup = async (req, res) => {
       message: 'Legal and setup details saved successfully',
       data: {
         schoolId: school._id,
-        registrationStep: school.registrationStep
+        registrationStep: school.registrationStep,
+        isSetup: school.isSetup
       }
     });
   } catch (error) {
@@ -301,7 +305,8 @@ exports.updateModulesPlan = async (req, res) => {
       data: {
         schoolId: school._id,
         registrationStep: school.registrationStep,
-        isRegistrationComplete: school.isRegistrationComplete
+        isRegistrationComplete: school.isRegistrationComplete,
+        isSetup: school.isSetup
       }
     });
   } catch (error) {
