@@ -22,6 +22,9 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/schools', require('./routes/schoolRoutes'));
 app.use('/api/super-admin', require('./routes/superAdminRoutes'));
 
+// API v1 Routes
+app.use('/api/v1/school', require('./routes/schoolProfileRoutes'));
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   console.log('Health check endpoint hit');
