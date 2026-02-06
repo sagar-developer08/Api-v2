@@ -2,10 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 const connectDB = require('./config/database');
-
+const dns = require('dns');
+dns.setServers(['8.8.8.8', '8.8.4.4']);
 // Load env vars
 dotenv.config();
-
 // Connect to database
 connectDB();
 
@@ -20,6 +20,9 @@ app.use(express.urlencoded({ extended: true }));
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/schools', require('./routes/schoolRoutes'));
+app.use('/api/admin/classes', require('./routes/classRoutes'));
+app.use('/api/academic/teachers', require('./routes/teacherRoutes'));
+app.use('/api/academic', require('./routes/academicRoutes'));
 app.use('/api/super-admin', require('./routes/superAdminRoutes'));
 
 // Health check endpoint

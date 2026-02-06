@@ -1,0 +1,284 @@
+{
+  "info": {
+    "name": "School SaaS API",
+    "description": "Registration, Setup Wizard, Admin Approval & Login flow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "adminToken", "value": "" },
+    { "key": "superAdminToken", "value": "" },
+    { "key": "schoolId", "value": "" },
+    { "key": "schoolCode", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register (send OTP)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status 200', () => pm.response.to.have.status(200));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolName\": \"Demo School\",\n  \"adminName\": \"John Doe\",\n  \"mobileNumber\": \"9876543210\",\n  \"email\": \"admin@demoschool.com\",\n  \"password\": \"SecurePass1\",\n  \"confirmPassword\": \"SecurePass1\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/register"
+          }
+        },
+        {
+          "name": "Verify OTP & complete registration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data) {",
+                  "  if (r.data.token) pm.collectionVariables.set('adminToken', r.data.token);",
+                  "  if (r.data.schoolId) pm.collectionVariables.set('schoolId', r.data.schoolId);",
+                  "  if (r.data.schoolCode) pm.collectionVariables.set('schoolCode', r.data.schoolCode);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@demoschool.com\",\n  \"otp\": \"123456\",\n  \"schoolName\": \"Demo School\",\n  \"adminName\": \"John Doe\",\n  \"mobileNumber\": \"9876543210\",\n  \"password\": \"SecurePass1\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/verify-otp"
+          }
+        },
+        {
+          "name": "Login (School Admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data && r.data.token) pm.collectionVariables.set('adminToken', r.data.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolCode\": \"{{schoolCode}}\",\n  \"email\": \"admin@demoschool.com\",\n  \"password\": \"SecurePass1\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/login"
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/auth/profile"
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@demoschool.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/forgot-password"
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"RESET_TOKEN_FROM_EMAIL\",\n  \"password\": \"NewSecurePass1\",\n  \"confirmPassword\": \"NewSecurePass1\"\n}"
+            },
+            "url": "{{baseUrl}}/api/auth/reset-password"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Setup Wizard",
+      "item": [
+        {
+          "name": "Get Setup Wizard",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/schools/{{schoolId}}/setup-wizard"
+          }
+        },
+        {
+          "name": "Step 1 – Basic Info",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] },
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolName\": \"Demo School\",\n  \"schoolType\": \"School\",\n  \"boardCurriculum\": \"CBSE\",\n  \"country\": \"India\",\n  \"state\": \"Maharashtra\",\n  \"city\": \"Mumbai\",\n  \"timezone\": \"Asia/Kolkata\",\n  \"academicYearStartMonth\": \"June\"\n}"
+            },
+            "url": "{{baseUrl}}/api/schools/{{schoolId}}/setup-wizard/step/1"
+          }
+        },
+        {
+          "name": "Step 2 – Academic Structure",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] },
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicYear\": \"2026-2027\",\n  \"classesOffered\": [\"Pre-KG\", \"LKG\", \"UKG\", \"Class 1\", \"Class 2\"],\n  \"defaultSections\": [\"A\", \"B\", \"C\"]\n}"
+            },
+            "url": "{{baseUrl}}/api/schools/{{schoolId}}/setup-wizard/step/2"
+          }
+        },
+        {
+          "name": "Step 3 – Branch Setup",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] },
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mainBranchName\": \"Demo School Main\",\n  \"branchCity\": \"Mumbai\"\n}"
+            },
+            "url": "{{baseUrl}}/api/schools/{{schoolId}}/setup-wizard/step/3"
+          }
+        },
+        {
+          "name": "Step 4 – Finish Setup",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{adminToken}}" }] },
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/schools/{{schoolId}}/setup-wizard/finish"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Super Admin",
+      "item": [
+        {
+          "name": "Super Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const r = pm.response.json();",
+                  "if (r.success && r.data && r.data.token) pm.collectionVariables.set('superAdminToken', r.data.token);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin@schoolsaas.com\",\n  \"password\": \"SuperAdmin123!\"\n}"
+            },
+            "url": "{{baseUrl}}/api/super-admin/login"
+          }
+        },
+        {
+          "name": "List Schools",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{superAdminToken}}" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/super-admin/schools?status=Pending Admin Approval"
+          }
+        },
+        {
+          "name": "List All Schools",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{superAdminToken}}" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/super-admin/schools"
+          }
+        },
+        {
+          "name": "Get School Details",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{superAdminToken}}" }] },
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/super-admin/schools/{{schoolId}}"
+          }
+        },
+        {
+          "name": "Approve School",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{superAdminToken}}" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"remarks\": \"Approved after review\"\n}"
+            },
+            "url": "{{baseUrl}}/api/super-admin/schools/{{schoolId}}/approve"
+          }
+        },
+        {
+          "name": "Reject School",
+          "request": {
+            "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{superAdminToken}}" }] },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"remarks\": \"Incomplete documentation\"\n}"
+            },
+            "url": "{{baseUrl}}/api/super-admin/schools/{{schoolId}}/reject"
+          }
+        }
+      ]
+    }
+  ]
+}
