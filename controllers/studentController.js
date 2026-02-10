@@ -66,6 +66,7 @@ exports.getAllStudents = async (req, res) => {
         if (classId) query.classId = classId;
         if (sectionId) query.sectionId = sectionId;
         if (status) query.status = status;
+        if (academicYear) query.academicYearId = academicYear;
 
         if (search) {
             query.$or = [
@@ -330,6 +331,108 @@ exports.getStudentStatistics = async (req, res) => {
                 month: m._id,
                 count: m.count
             }))
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Server Error', message: error.message });
+    }
+};
+
+// @desc    Get Student Metrics (Dashboard)
+// @route   GET /api/admin/students/metrics
+// @access  Private
+exports.getStudentMetrics = async (req, res) => {
+    try {
+        const schoolId = req.admin.schoolId;
+        const { academicYear } = req.query;
+        const matchQuery = { schoolId: new mongoose.Types.ObjectId(schoolId) };
+
+        let refDate = new Date();
+
+        if (academicYear) {
+            matchQuery.academicYearId = new mongoose.Types.ObjectId(academicYear);
+            const ayDoc = await AcademicYear.findById(academicYear);
+            if (ayDoc) {
+                if (ayDoc.endDate && ayDoc.endDate < refDate) {
+                    refDate = ayDoc.endDate;
+                } else if (ayDoc.endYear) {
+                    const endD = new Date(`${ayDoc.endYear}-12-31`);
+                    if (endD < refDate) refDate = endD;
+                }
+            }
+        }
+
+        // Calculate the date 6 months ago from refDate
+        const sixMonthsAgo = new Date(refDate);
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        sixMonthsAgo.setDate(1); // Start from the 1st of that month
+        sixMonthsAgo.setHours(0, 0, 0, 0);
+
+        const [statusCounts, byClass, admissionTrend] = await Promise.all([
+            // 1. Students by status (active / inactive)
+            Student.aggregate([
+                { $match: matchQuery },
+                { $group: { _id: '$status', count: { $sum: 1 } } }
+            ]),
+
+            // 2. Students count class-wise
+            Student.aggregate([
+                { $match: matchQuery },
+                { $group: { _id: '$classId', count: { $sum: 1 } } },
+                { $lookup: { from: 'classes', localField: '_id', foreignField: '_id', as: 'class' } },
+                { $unwind: { path: '$class', preserveNullAndEmptyArrays: true } },
+                { $project: { classId: '$_id', className: '$class.name', section: '$class.section', count: 1, _id: 0 } },
+                { $sort: { className: 1 } }
+            ]),
+
+            // 3. Admission trend - last 6 months based on admissionDate
+            Student.aggregate([
+                { $match: { ...matchQuery, admissionDate: { $gte: sixMonthsAgo } } },
+                {
+                    $group: {
+                        _id: { $dateToString: { format: '%Y-%m', date: '$admissionDate' } },
+                        count: { $sum: 1 }
+                    }
+                },
+                { $sort: { _id: 1 } }
+            ])
+        ]);
+
+        // Process status counts
+        const byStatus = {};
+        let totalStudents = 0;
+        statusCounts.forEach(s => {
+            byStatus[s._id] = s.count;
+            totalStudents += s.count;
+        });
+
+        // Build the last 6 months labels with counts (fill missing months with 0)
+        const admissionTrendMap = {};
+        admissionTrend.forEach(m => { admissionTrendMap[m._id] = m.count; });
+
+        const months = [];
+        const now = refDate;
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const label = d.toLocaleString('default', { month: 'short' });
+            months.push({
+                month: key,
+                label,
+                count: admissionTrendMap[key] || 0
+            });
+        }
+
+        res.json({
+            totalStudents,
+            studentsByClass: byClass,
+            studentsByStatus: {
+                active: byStatus.active || 0,
+                inactive: byStatus.inactive || 0,
+                graduated: byStatus.graduated || 0,
+                transferred: byStatus.transferred || 0,
+                suspended: byStatus.suspended || 0
+            },
+            admissionTrend: months
         });
     } catch (error) {
         res.status(500).json({ error: 'Server Error', message: error.message });

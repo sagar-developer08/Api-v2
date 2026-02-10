@@ -24,6 +24,9 @@ router.get('/export', controller.exportStudents);
 // STATISTICS (Must be before /:id routes)
 router.get('/statistics', controller.getStudentStatistics);
 
+// METRICS / DASHBOARD (Must be before /:id routes)
+router.get('/metrics', controller.getStudentMetrics);
+
 // ============================================
 // STUDENT CRUD
 // ============================================

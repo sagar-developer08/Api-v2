@@ -1,4 +1,5 @@
 const Teacher = require('../models/Teacher');
+const AcademicYear = require('../models/AcademicYear');
 const mongoose = require('mongoose');
 
 // @desc    Get All Teachers
@@ -6,8 +7,22 @@ const mongoose = require('mongoose');
 // @access  Private
 exports.getAllTeachers = async (req, res) => {
   try {
-    const { search, page = 1, limit = 10 } = req.query;
+    const { search, page = 1, limit = 10, academicYear } = req.query;
     const query = { schoolId: req.admin.schoolId };
+
+    if (academicYear) {
+      const academicYearDoc = await AcademicYear.findById(academicYear);
+      if (academicYearDoc) {
+        let endDate = academicYearDoc.endDate;
+        if (!endDate && academicYearDoc.endYear) {
+          endDate = new Date(`${academicYearDoc.endYear}-12-31`);
+        }
+        
+        if (endDate) {
+          query.joiningDate = { $lte: endDate };
+        }
+      }
+    }
 
     if (search) {
       const regex = new RegExp(search, 'i');
@@ -113,7 +128,7 @@ exports.updateTeacher = async (req, res) => {
       data: teacher
     });
   } catch (error) {
-     if (error.code === 11000) {
+    if (error.code === 11000) {
       return res.status(400).json({ success: false, message: 'Email already exists' });
     }
     res.status(400).json({ success: false, message: error.message });
@@ -136,3 +151,94 @@ exports.deleteTeacher = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+// @desc    Get Teacher Metrics (Dashboard)
+// @route   GET /api/academic/teachers/metrics
+// @access  Private
+exports.getTeacherMetrics = async (req, res) => {
+  try {
+    const schoolId = req.admin.schoolId;
+    const { academicYear } = req.query;
+    const matchQuery = { schoolId: new mongoose.Types.ObjectId(schoolId) };
+
+    let refDate = new Date();
+
+    if (academicYear) {
+      const academicYearDoc = await AcademicYear.findById(academicYear);
+      if (academicYearDoc) {
+        let endDate = academicYearDoc.endDate;
+        if (!endDate && academicYearDoc.endYear) {
+          endDate = new Date(`${academicYearDoc.endYear}-12-31`);
+        }
+        
+        if (endDate) {
+          matchQuery.joiningDate = { $lte: endDate };
+          if (endDate < refDate) {
+            refDate = endDate;
+          }
+        }
+      }
+    }
+
+    // Calculate the date 6 months ago from refDate
+    const sixMonthsAgo = new Date(refDate);
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    sixMonthsAgo.setDate(1);
+    sixMonthsAgo.setHours(0, 0, 0, 0);
+
+    const [totalTeachers, byDepartment, joiningTrend] = await Promise.all([
+      // Total count
+      Teacher.countDocuments(matchQuery),
+
+      // 1. Teachers by Department (designation)
+      Teacher.aggregate([
+        { $match: matchQuery },
+        { $group: { _id: '$designation', count: { $sum: 1 } } },
+        { $project: { department: { $ifNull: ['$_id', 'Unassigned'] }, count: 1, _id: 0 } },
+        { $sort: { department: 1 } }
+      ]),
+
+      // 2. Joining trend - last 6 months based on joiningDate
+      Teacher.aggregate([
+        { $match: { ...matchQuery, joiningDate: { $gte: sixMonthsAgo } } },
+        {
+          $group: {
+            _id: { $dateToString: { format: '%Y-%m', date: '$joiningDate' } },
+            count: { $sum: 1 }
+          }
+        },
+        { $sort: { _id: 1 } }
+      ])
+    ]);
+
+    // Build the last 6 months labels with counts (fill missing months with 0)
+    const joiningTrendMap = {};
+    joiningTrend.forEach(m => { joiningTrendMap[m._id] = m.count; });
+
+    const months = [];
+    const now = refDate;
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = d.toLocaleString('default', { month: 'short' });
+      months.push({
+        month: key,
+        label,
+        count: joiningTrendMap[key] || 0
+      });
+    }
+
+    res.json({
+      totalTeachers,
+      teachersByDepartment: byDepartment,
+      teachersByStatus: {
+        active: totalTeachers,
+        inactive: 0
+      },
+      joiningTrend: months
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Server Error', message: error.message });
+  }
+};
+
