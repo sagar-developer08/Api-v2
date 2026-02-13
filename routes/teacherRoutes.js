@@ -6,10 +6,14 @@ const {
   createTeacher,
   getTeacherById,
   updateTeacher,
-  deleteTeacher
+  deleteTeacher,
+  getTeacherMetrics
 } = require('../controllers/teacherController');
 
 router.use(protect);
+
+// METRICS / DASHBOARD (Must be before /:id routes)
+router.get('/metrics', getTeacherMetrics);
 
 router.route('/')
   .get(getAllTeachers)

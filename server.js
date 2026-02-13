@@ -28,6 +28,9 @@ app.use('/api/super-admin', require('./routes/superAdminRoutes'));
 // API v1 Routes
 app.use('/api/v1/school', require('./routes/schoolProfileRoutes'));
 
+// Student Management Routes
+app.use('/api/admin/students', require('./routes/studentRoutes'));
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   console.log('Health check endpoint hit');
