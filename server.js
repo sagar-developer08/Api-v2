@@ -18,7 +18,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Routes
-app.use('/api/auth', require('./routes/authRoutes'));
+app.use('/api/v1/auth', require('./routes/authRoutes'));
 app.use('/api/schools', require('./routes/schoolRoutes'));
 app.use('/api/admin/classes', require('./routes/classRoutes'));
 app.use('/api/academic/teachers', require('./routes/teacherRoutes'));
