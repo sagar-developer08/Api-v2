@@ -1,8 +1,196 @@
 const Admin = require('../models/Admin');
+const Student = require('../models/Student');
+const Teacher = require('../models/Teacher');
 const School = require('../models/School');
 const PasswordReset = require('../models/PasswordReset');
 const { sendPasswordResetEmail } = require('../config/email');
 const generateToken = require('../utils/generateToken');
+
+exports.teacherLogin = async (req, res) => {
+  try {
+    const { schoolCode, email, employeeId, password } = req.body;
+
+    if (!schoolCode || !password || (!email && !employeeId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide schoolCode, password, and either email or employeeId'
+      });
+    }
+
+    const school = await School.findOne({
+      schoolCode: (schoolCode || '').toString().trim().toUpperCase()
+    });
+    if (!school) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    if (school.status !== 'Approved' && school.status !== 'Pending Setup') {
+      return res.status(403).json({
+        success: false,
+        message: 'Login not allowed for your school at this time.',
+        status: school.status
+      });
+    }
+
+    const query = { schoolId: school._id };
+    if (email) {
+      query.email = email.toLowerCase().trim();
+    } else {
+      query.employeeId = employeeId.trim();
+    }
+
+    const teacher = await Teacher.findOne(query).select('+password');
+    if (!teacher) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    if (teacher.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        message: 'Teacher account is not active',
+        status: teacher.status
+      });
+    }
+
+    if (!teacher.password) {
+      return res.status(401).json({
+        success: false,
+        message: 'Password not set. Please contact your school administrator.'
+      });
+    }
+
+    const isMatch = await teacher.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    const token = generateToken(teacher._id, 'teacher');
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        teacher: {
+          id: teacher._id,
+          employeeId: teacher.employeeId,
+          firstName: teacher.firstName,
+          lastName: teacher.lastName,
+          email: teacher.email,
+          designation: teacher.designation,
+          schoolId: school._id,
+          schoolName: school.schoolName,
+          schoolCode: school.schoolCode
+        },
+        token
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Login failed',
+      error: error.message
+    });
+  }
+};
+
+exports.studentLogin = async (req, res) => {
+  try {
+    const { schoolCode, email, admissionNumber, password } = req.body;
+
+    if (!schoolCode || !password || (!email && !admissionNumber)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide schoolCode, password, and either email or admissionNumber'
+      });
+    }
+
+    const school = await School.findOne({
+      schoolCode: (schoolCode || '').toString().trim().toUpperCase()
+    });
+    if (!school) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    if (school.status !== 'Approved' && school.status !== 'Pending Setup') {
+      return res.status(403).json({
+        success: false,
+        message: 'Login not allowed for your school at this time.',
+        status: school.status
+      });
+    }
+
+    // Find student by email or admission number
+    const query = { schoolId: school._id };
+    if (email) {
+      query.email = email.toLowerCase().trim();
+    } else {
+      query.admissionNumber = admissionNumber.trim();
+    }
+
+    const student = await Student.findOne(query).select('+password');
+    if (!student) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    if (student.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        message: 'Student account is not active',
+        status: student.status
+      });
+    }
+
+    if (!student.password) {
+      return res.status(401).json({
+        success: false,
+        message: 'Password not set. Please contact your school administrator.'
+      });
+    }
+
+    const isMatch = await student.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid credentials'
+      });
+    }
+
+    const token = generateToken(student._id, 'student');
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        student: {
+          id: student._id,
+          studentId: student.studentId,
+          firstName: student.firstName,
+          lastName: student.lastName,
+          email: student.email,
+          admissionNumber: student.admissionNumber,
+          classId: student.classId,
+          sectionId: student.sectionId,
+          schoolId: school._id,
+          schoolName: school.schoolName,
+          schoolCode: school.schoolCode
+        },
+        token
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Login failed',
+      error: error.message
+    });
+  }
+};
 
 exports.login = async (req, res) => {
   try {

@@ -48,4 +48,8 @@ router.post(
 
 router.get('/profile', protect, authController.getProfile);
 
+router.post('/student-login', authController.studentLogin);
+
+router.post('/teacher-login', authController.teacherLogin);
+
 module.exports = router;
