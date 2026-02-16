@@ -17,10 +17,27 @@ function parseAcademicYearLabel(label) {
   return null;
 }
 
+/** Resolve school by ObjectId (24 hex chars) or schoolCode (e.g. I0F5HAZZ). Returns Mongoose query (thenable). Optional select fields for projection. */
+function findSchoolByIdOrCode(param, selectFields = null) {
+  if (!param || typeof param !== 'string') return null;
+  const trimmed = param.trim();
+  let query;
+  if (/^[a-fA-F0-9]{24}$/.test(trimmed)) {
+    query = School.findById(trimmed);
+  } else {
+    query = School.findOne({ schoolCode: trimmed.toUpperCase() });
+  }
+  if (selectFields) {
+    query = query.select(selectFields);
+  }
+  return query;
+}
+
+const SETUP_WIZARD_SCHOOL_SELECT = 'schoolName schoolCode status setupWizardStep setupLocked isSetup schoolType boardCurriculum country state city timezone academicYearStartMonth adminId';
+
 exports.getSetupWizard = async (req, res) => {
   try {
-    const school = await School.findById(req.params.schoolId)
-      .select('schoolName schoolCode status setupWizardStep setupLocked isSetup schoolType boardCurriculum country state city timezone academicYearStartMonth adminId');
+    const school = await findSchoolByIdOrCode(req.params.schoolId, SETUP_WIZARD_SCHOOL_SELECT);
     if (!school) {
       return res.status(404).json({ success: false, message: 'School not found' });
     }
@@ -75,7 +92,7 @@ exports.getSetupWizard = async (req, res) => {
 
 exports.step1BasicInfo = async (req, res) => {
   try {
-    const school = await School.findById(req.params.schoolId);
+    const school = await findSchoolByIdOrCode(req.params.schoolId);
     if (!school) return res.status(404).json({ success: false, message: 'School not found' });
     if (req.admin.schoolId.toString() !== school._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
@@ -122,7 +139,7 @@ exports.step1BasicInfo = async (req, res) => {
 
 exports.step2AcademicStructure = async (req, res) => {
   try {
-    const school = await School.findById(req.params.schoolId);
+    const school = await findSchoolByIdOrCode(req.params.schoolId);
     if (!school) return res.status(404).json({ success: false, message: 'School not found' });
     if (req.admin.schoolId.toString() !== school._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
@@ -133,39 +150,55 @@ exports.step2AcademicStructure = async (req, res) => {
 
     const { academicYear, classesOffered, defaultSections } = req.body;
 
+    let defaultAcademicYearId = null;
     if (academicYear) {
       const parsed = parseAcademicYearLabel(academicYear);
       if (parsed) {
         await AcademicYear.deleteMany({ schoolId: school._id });
-        await AcademicYear.create({
+        const academicYearDoc = await AcademicYear.create({
           schoolId: school._id,
           label: academicYear.trim(),
           startYear: parsed.startYear,
           endYear: parsed.endYear,
           isDefault: true
         });
+        defaultAcademicYearId = academicYearDoc._id;
       }
     }
 
+    // Delete existing classes and sections (sections depend on classes)
+    await Section.deleteMany({ schoolId: school._id });
+    await Class.deleteMany({ schoolId: school._id });
+
     if (Array.isArray(classesOffered) && classesOffered.length) {
       const valid = classesOffered.filter((c) => CLASS_OPTIONS.includes(c));
-      await Class.deleteMany({ schoolId: school._id });
+      const sectionNames = Array.isArray(defaultSections) && defaultSections.length
+        ? defaultSections.slice(0, 10).map((s) => String(s).trim()).filter(Boolean)
+        : [];
+
       const toInsert = valid.map((name, i) => ({
         schoolId: school._id,
         name,
-        order: i
+        order: i,
+        academicYearId: defaultAcademicYearId
       }));
-      await Class.insertMany(toInsert);
-    }
+      const createdClasses = await Class.insertMany(toInsert);
 
-    if (Array.isArray(defaultSections) && defaultSections.length) {
-      await Section.deleteMany({ schoolId: school._id });
-      await Section.insertMany(
-        defaultSections.slice(0, 10).map((name) => ({
-          schoolId: school._id,
-          name: String(name).trim()
-        }))
-      );
+      // Create sections for each class (each class gets sections A, B, C, etc.)
+      const sectionsToInsert = [];
+      for (const cls of createdClasses) {
+        for (const sectionName of sectionNames) {
+          sectionsToInsert.push({
+            schoolId: school._id,
+            classId: cls._id,
+            name: sectionName,
+            code: sectionName
+          });
+        }
+      }
+      if (sectionsToInsert.length) {
+        await Section.insertMany(sectionsToInsert);
+      }
     }
 
     school.setupWizardStep = Math.max(school.setupWizardStep, 2);
@@ -187,7 +220,7 @@ exports.step2AcademicStructure = async (req, res) => {
 
 exports.step3BranchSetup = async (req, res) => {
   try {
-    const school = await School.findById(req.params.schoolId);
+    const school = await findSchoolByIdOrCode(req.params.schoolId);
     if (!school) return res.status(404).json({ success: false, message: 'School not found' });
     if (req.admin.schoolId.toString() !== school._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
@@ -269,7 +302,7 @@ exports.step3BranchSetup = async (req, res) => {
 
 exports.finishSetup = async (req, res) => {
   try {
-    const school = await School.findById(req.params.schoolId);
+    const school = await findSchoolByIdOrCode(req.params.schoolId);
     if (!school) return res.status(404).json({ success: false, message: 'School not found' });
     if (req.admin.schoolId.toString() !== school._id.toString()) {
       return res.status(403).json({ success: false, message: 'Not authorized' });
