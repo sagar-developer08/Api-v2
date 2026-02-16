@@ -17,7 +17,7 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Routes
+// Routes ...
 app.use('/api/v1/auth', require('./routes/authRoutes'));
 app.use('/api/schools', require('./routes/schoolRoutes'));
 app.use('/api/admin/classes', require('./routes/classRoutes'));
