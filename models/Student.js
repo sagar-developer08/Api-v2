@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const addressSchema = new mongoose.Schema({
   line1: { type: String, trim: true },
@@ -46,6 +47,11 @@ const studentSchema = new mongoose.Schema({
   alternatePhone: {
     type: String,
     trim: true
+  },
+  password: {
+    type: String,
+    minlength: 6,
+    select: false // Don't return password in queries by default
   },
   dateOfBirth: {
     type: Date,
@@ -118,8 +124,35 @@ const studentSchema = new mongoose.Schema({
   parentPhone: { // Keeping for backward compatibility
     type: String,
     trim: true
+  },
+  settings: {
+    notifications: {
+      email: { type: Boolean, default: true },
+      sms: { type: Boolean, default: false },
+      push: { type: Boolean, default: true }
+    },
+    preferences: {
+      language: { type: String, default: 'en' },
+      timezone: { type: String, default: 'Asia/Kolkata' },
+      dateFormat: { type: String, default: 'DD/MM/YYYY' }
+    }
   }
 }, { timestamps: true });
+
+// Hash password before saving
+studentSchema.pre('save', async function (next) {
+  if (!this.isModified('password') || !this.password) {
+    return next();
+  }
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
+
+// Method to compare password
+studentSchema.methods.comparePassword = async function (candidatePassword) {
+  return await bcrypt.compare(candidatePassword, this.password);
+};
 
 studentSchema.index({ schoolId: 1 });
 studentSchema.index({ schoolId: 1, admissionNumber: 1 }, { unique: true });

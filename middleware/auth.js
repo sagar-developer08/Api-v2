@@ -97,3 +97,73 @@ exports.requireApprovedSchool = async (req, res, next) => {
     });
   }
 };
+
+exports.protectStudent = async (req, res, next) => {
+  try {
+    const token = getToken(req);
+    if (!token) return unauthorized(res);
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== 'student') {
+      return res.status(403).json({
+        success: false,
+        message: 'Student access required'
+      });
+    }
+
+    const Student = require('../models/Student');
+    const student = await Student.findById(decoded.id).populate('schoolId', 'schoolName schoolCode status');
+    if (!student) return unauthorized(res, 'Student not found');
+
+    if (student.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        message: 'Student account is not active',
+        status: student.status
+      });
+    }
+
+    req.student = student;
+    next();
+  } catch (e) {
+    return res.status(401).json({
+      success: false,
+      message: 'Not authorized to access this route'
+    });
+  }
+};
+
+exports.protectTeacher = async (req, res, next) => {
+  try {
+    const token = getToken(req);
+    if (!token) return unauthorized(res);
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== 'teacher') {
+      return res.status(403).json({
+        success: false,
+        message: 'Teacher access required'
+      });
+    }
+
+    const Teacher = require('../models/Teacher');
+    const teacher = await Teacher.findById(decoded.id).populate('schoolId', 'schoolName schoolCode status');
+    if (!teacher) return unauthorized(res, 'Teacher not found');
+
+    if (teacher.status !== 'active') {
+      return res.status(403).json({
+        success: false,
+        message: 'Teacher account is not active',
+        status: teacher.status
+      });
+    }
+
+    req.teacher = teacher;
+    next();
+  } catch (e) {
+    return res.status(401).json({
+      success: false,
+      message: 'Not authorized to access this route'
+    });
+  }
+};
