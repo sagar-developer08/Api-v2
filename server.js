@@ -19,7 +19,7 @@ app.use(express.urlencoded({ extended: true }));
 
 // Routes ...
 app.use('/api/v1/auth', require('./routes/authRoutes'));
-app.use('/api/schools', require('./routes/schoolRoutes'));
+app.use('/api/v1/schools', require('./routes/schoolRoutes'));
 app.use('/api/admin/classes', require('./routes/classRoutes'));
 app.use('/api/academic/teachers', require('./routes/teacherRoutes'));
 app.use('/api/academic', require('./routes/academicRoutes'));
