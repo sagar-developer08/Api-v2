@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protectTeacher } = require('../middleware/auth');
 const ctrl = require('../controllers/teacherAppController');
+const ext = require('../controllers/adminExtendedController');
 
 // All routes require teacher authentication
 router.use(protectTeacher);
@@ -79,6 +80,7 @@ router.delete('/content/:contentId', ctrl.deleteContent);
 // 11. Communication
 router.get('/communication/notices', ctrl.getNotices);
 router.get('/communication/notices/:noticeId', ctrl.getNoticeDetails);
+router.put('/communication/notices/:noticeId/read', ext.markNoticeAsRead);
 router.post('/communication/messages', ctrl.sendMessage);
 router.get('/communication/messages', ctrl.getMessages);
 
@@ -89,8 +91,9 @@ router.put('/leave/requests/:requestId', ctrl.updateLeaveRequest);
 router.delete('/leave/requests/:requestId', ctrl.cancelLeaveRequest);
 router.get('/leave/balance', ctrl.getLeaveBalance);
 
-// 13. Settings
+// 13. Settings & Password
 router.get('/settings', ctrl.getSettings);
 router.put('/settings', ctrl.updateSettings);
+router.post('/change-password', ctrl.changePassword);
 
 module.exports = router;

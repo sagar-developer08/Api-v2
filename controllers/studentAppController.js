@@ -1267,3 +1267,33 @@ exports.updateSettings = async (req, res) => {
         res.status(500).json({ success: false, message: 'Error updating settings', error: error.message });
     }
 };
+
+exports.changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword, confirmPassword } = req.body;
+        if (!currentPassword || !newPassword || !confirmPassword) {
+            return res.status(400).json({ success: false, message: 'Current password, new password and confirm password are required' });
+        }
+        if (newPassword !== confirmPassword) {
+            return res.status(400).json({ success: false, message: 'New password and confirm password do not match' });
+        }
+        if (newPassword.length < 6) {
+            return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+        }
+
+        const student = await Student.findById(req.student._id).select('+password');
+        if (!student.password) {
+            return res.status(400).json({ success: false, message: 'Password not set. Please contact your school administrator.' });
+        }
+        const isMatch = await student.comparePassword(currentPassword);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+        }
+
+        student.password = newPassword;
+        await student.save();
+        res.status(200).json({ success: true, message: 'Password changed successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error changing password', error: error.message });
+    }
+};

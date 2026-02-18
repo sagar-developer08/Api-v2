@@ -167,3 +167,37 @@ exports.protectTeacher = async (req, res, next) => {
     });
   }
 };
+
+exports.protectParent = async (req, res, next) => {
+  try {
+    const token = getToken(req);
+    if (!token) return unauthorized(res);
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    if (decoded.role !== 'parent') {
+      return res.status(403).json({
+        success: false,
+        message: 'Parent access required'
+      });
+    }
+
+    const Parent = require('../models/Parent');
+    const parent = await Parent.findById(decoded.id).populate('schoolId', 'schoolName schoolCode status');
+    if (!parent) return unauthorized(res, 'Parent not found');
+
+    if (!parent.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: 'Parent account is not active'
+      });
+    }
+
+    req.parent = parent;
+    next();
+  } catch (e) {
+    return res.status(401).json({
+      success: false,
+      message: 'Not authorized to access this route'
+    });
+  }
+};

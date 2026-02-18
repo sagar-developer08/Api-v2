@@ -40,6 +40,24 @@ app.use('/api/v1/teacher', require('./routes/teacherAppRoutes'));
 // Admin App Routes (Admin-facing)
 app.use('/api/v1/admin', require('./routes/adminAppRoutes'));
 
+// Parent App Routes (Parent-facing)
+app.use('/api/v1/parent', require('./routes/parentAppRoutes'));
+
+// Staff HR (Admin)
+app.use('/api/v1/staff', require('./routes/staffHrRoutes'));
+
+// Transport (Admin)
+app.use('/api/v1/transport', require('./routes/transportRoutes'));
+
+// Fees Management (Admin - fee heads, rules, dashboard)
+app.use('/api/v1/fees', require('./routes/feesManagementRoutes'));
+
+// LMS (Admin)
+app.use('/api/v1/lms', require('./routes/lmsRoutes'));
+
+// Marketing (Super Admin / public leads)
+app.use('/api/v1/marketing', require('./routes/marketingRoutes'));
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   console.log('Health check endpoint hit');

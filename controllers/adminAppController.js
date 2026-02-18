@@ -18,6 +18,7 @@ const StudentDocument = require('../models/StudentDocument');
 const Notice = require('../models/Notice');
 const Content = require('../models/Content');
 const School = require('../models/School');
+const SchoolSettings = require('../models/SchoolSettings');
 const mongoose = require('mongoose');
 
 // ============================================
@@ -436,6 +437,24 @@ exports.addStudentGuardian = async (req, res) => {
         res.status(201).json({ success: true, data: guardian, message: 'Guardian added successfully' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error adding guardian', error: error.message });
+    }
+};
+
+exports.updateStudentGuardian = async (req, res) => {
+    try {
+        const schoolId = req.admin.schoolId._id || req.admin.schoolId;
+        const allowed = ['name', 'relationship', 'phone', 'email', 'address', 'occupation', 'qualification', 'income', 'isPrimary', 'isEmergencyContact'];
+        const updates = {};
+        allowed.forEach(f => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
+        const guardian = await Guardian.findOneAndUpdate(
+            { _id: req.params.guardianId, studentId: req.params.studentId, schoolId },
+            updates,
+            { new: true }
+        );
+        if (!guardian) return res.status(404).json({ success: false, message: 'Guardian not found' });
+        res.json({ success: true, data: guardian, message: 'Guardian updated successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error updating guardian', error: error.message });
     }
 };
 
@@ -2077,5 +2096,46 @@ exports.publishNotice = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error publishing notice', error: error.message });
+    }
+};
+
+exports.getSettings = async (req, res) => {
+    try {
+        const schoolId = req.admin.schoolId._id || req.admin.schoolId;
+        let settings = await SchoolSettings.findOne({ schoolId }).lean();
+        if (!settings) {
+            settings = await SchoolSettings.create({ schoolId });
+            settings = settings.toObject();
+        }
+        delete settings.schoolId;
+        delete settings.__v;
+        res.json({ success: true, data: settings });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error fetching settings', error: error.message });
+    }
+};
+
+exports.updateSettings = async (req, res) => {
+    try {
+        const schoolId = req.admin.schoolId._id || req.admin.schoolId;
+        const allowed = ['academic', 'attendance', 'fees', 'notifications'];
+        const updates = {};
+        allowed.forEach(section => {
+            if (req.body[section] && typeof req.body[section] === 'object') {
+                Object.keys(req.body[section]).forEach(k => {
+                    updates[`${section}.${k}`] = req.body[section][k];
+                });
+            }
+        });
+        const settings = await SchoolSettings.findOneAndUpdate(
+            { schoolId },
+            { $set: updates },
+            { new: true, upsert: true }
+        ).lean();
+        delete settings.schoolId;
+        delete settings.__v;
+        res.json({ success: true, data: settings, message: 'Settings updated' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Error updating settings', error: error.message });
     }
 };

@@ -137,3 +137,54 @@ exports.verifyOtp = async (req, res) => {
     });
   }
 };
+
+exports.resendOtp = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const emailLower = (email || '').toLowerCase().trim();
+    if (!emailLower) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required'
+      });
+    }
+
+    const existingAdmin = await Admin.findOne({ email: emailLower });
+    if (existingAdmin) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email already registered. Please login.'
+      });
+    }
+
+    const record = await OTPVerification.findOne({ email: emailLower, verified: false });
+    const mobileNumber = (record && record.mobileNumber) ? record.mobileNumber : (req.body.mobileNumber || '');
+    if (!mobileNumber) {
+      return res.status(400).json({
+        success: false,
+        message: 'No pending registration found for this email. Please use the register endpoint first, or provide mobileNumber.'
+      });
+    }
+
+    const { otp, expiresAt } = await OTPVerification.createForRegistration(emailLower, mobileNumber);
+    const emailSent = await sendOTPEmail(emailLower, otp);
+    if (!emailSent) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to send OTP. Please try again.'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'OTP sent to your email.',
+      data: { email: emailLower, expiresAt }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Resend OTP failed',
+      error: error.message
+    });
+  }
+};

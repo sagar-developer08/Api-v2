@@ -362,6 +362,78 @@ exports.resetPassword = async (req, res) => {
   }
 };
 
+exports.parentLogin = async (req, res) => {
+  try {
+    const { schoolCode, email, password } = req.body;
+    if (!schoolCode || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide schoolCode, email and password'
+      });
+    }
+
+    const school = await School.findOne({
+      schoolCode: (schoolCode || '').toString().trim().toUpperCase()
+    });
+    if (!school) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+    if (school.status !== 'Approved' && school.status !== 'Pending Setup') {
+      return res.status(403).json({
+        success: false,
+        message: 'Login not allowed for your school at this time.',
+        status: school.status
+      });
+    }
+
+    const Parent = require('../models/Parent');
+    const parent = await Parent.findOne({
+      schoolId: school._id,
+      email: (email || '').toLowerCase().trim()
+    }).select('+password').populate('schoolId', 'schoolName schoolCode');
+
+    if (!parent) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+    if (!parent.isActive) {
+      return res.status(403).json({
+        success: false,
+        message: 'Parent account is not active'
+      });
+    }
+
+    const isMatch = await parent.comparePassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    const token = generateToken(parent._id, 'parent');
+
+    res.status(200).json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        parent: {
+          id: parent._id,
+          fullName: parent.fullName,
+          email: parent.email,
+          phone: parent.phone,
+          schoolId: school._id,
+          schoolName: school.schoolName,
+          schoolCode: school.schoolCode
+        },
+        token
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Login failed',
+      error: error.message
+    });
+  }
+};
+
 exports.getProfile = async (req, res) => {
   try {
     const admin = await Admin.findById(req.admin._id)

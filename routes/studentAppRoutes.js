@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { protectStudent } = require('../middleware/auth');
 const ctrl = require('../controllers/studentAppController');
+const ext = require('../controllers/adminExtendedController');
 
 // All routes require student authentication
 router.use(protectStudent);
@@ -72,13 +73,15 @@ router.post('/content/:contentId/progress', ctrl.trackContentProgress);
 router.get('/notices', ctrl.getNotices);
 router.get('/notices/:noticeId', ctrl.getNoticeDetails);
 router.post('/notices/:noticeId/read', ctrl.markNoticeAsRead);
+router.put('/notices/:noticeId/read', ext.markNoticeAsRead);
 router.get('/messages', ctrl.getMessages);
 router.get('/messages/:messageId', ctrl.getMessageDetails);
 router.post('/messages', ctrl.sendMessage);
 router.post('/messages/:messageId/read', ctrl.markMessageAsRead);
 
-// 14. Settings
+// 14. Settings & Password
 router.get('/settings', ctrl.getSettings);
 router.put('/settings', ctrl.updateSettings);
+router.post('/change-password', ctrl.changePassword);
 
 module.exports = router;
