@@ -17,6 +17,20 @@ router.get(
 );
 
 /**
+ * @route   GET /api/v1/school/profile/by-branch
+ * @desc    Fetch school profile with branch & academic year context
+ * @query   branchId? - optional branch ObjectId (falls back to admin.branchId)
+ * @query   academicYearId? - optional academic year ObjectId
+ * @access  Private (Requires approved school admin)
+ */
+router.get(
+    '/profile/by-branch',
+    protect,
+    requireApprovedSchool,
+    schoolProfileController.getSchoolProfileByBranch
+);
+
+/**
  * @route   PUT /api/v1/school/profile
  * @desc    Update school profile (step-aware)
  * @query   step - Optional: basic|contact|administrative|academic|timings|policies|optional

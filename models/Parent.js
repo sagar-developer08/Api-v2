@@ -1,6 +1,9 @@
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
+// Design: Parent has no branchId. Parents are linked via students; a parent can have
+// children in multiple branches of the same school. Branch context is derived from
+// the students they are associated with.
 const parentSchema = new mongoose.Schema({
   schoolId: {
     type: mongoose.Schema.Types.ObjectId,

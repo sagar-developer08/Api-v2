@@ -26,9 +26,11 @@ exports.protect = async (req, res, next) => {
       });
     }
 
-    const admin = await Admin.findById(decoded.id);
+    const admin = await Admin.findById(decoded.id).populate('branchId', 'name city isMain');
     if (!admin) return unauthorized(res, 'Admin not found');
     req.admin = admin;
+    // Set branch filter: null branchId = school-level admin (sees all branches), set branchId = branch-level admin
+    req.branchFilter = admin.branchId ? { branchId: admin.branchId._id } : {};
     next();
   } catch (e) {
     return res.status(401).json({
@@ -88,6 +90,10 @@ exports.requireApprovedSchool = async (req, res, next) => {
       });
     }
     req.school = school;
+    // Ensure branchFilter is set (from protect middleware)
+    if (!req.branchFilter) {
+      req.branchFilter = admin.branchId ? { branchId: admin.branchId._id } : {};
+    }
     next();
   } catch (e) {
     return res.status(500).json({
@@ -96,6 +102,16 @@ exports.requireApprovedSchool = async (req, res, next) => {
       error: e.message
     });
   }
+};
+
+// Helper middleware to add branch filter to query
+exports.addBranchFilter = (req, res, next) => {
+  // This middleware adds branchFilter to req.query for easy filtering
+  // Controllers can use: { ...req.branchFilter, ...otherFilters }
+  if (req.branchFilter && Object.keys(req.branchFilter).length > 0) {
+    req.queryFilter = { ...req.queryFilter, ...req.branchFilter };
+  }
+  next();
 };
 
 exports.protectStudent = async (req, res, next) => {
@@ -112,7 +128,9 @@ exports.protectStudent = async (req, res, next) => {
     }
 
     const Student = require('../models/Student');
-    const student = await Student.findById(decoded.id).populate('schoolId', 'schoolName schoolCode status');
+    const student = await Student.findById(decoded.id)
+      .populate('schoolId', 'schoolName schoolCode status')
+      .populate('branchId', 'name city isMain');
     if (!student) return unauthorized(res, 'Student not found');
 
     if (student.status !== 'active') {
@@ -124,6 +142,7 @@ exports.protectStudent = async (req, res, next) => {
     }
 
     req.student = student;
+    req.branchFilter = { branchId: student.branchId._id };
     next();
   } catch (e) {
     return res.status(401).json({
@@ -147,7 +166,9 @@ exports.protectTeacher = async (req, res, next) => {
     }
 
     const Teacher = require('../models/Teacher');
-    const teacher = await Teacher.findById(decoded.id).populate('schoolId', 'schoolName schoolCode status');
+    const teacher = await Teacher.findById(decoded.id)
+      .populate('schoolId', 'schoolName schoolCode status')
+      .populate('branchId', 'name city isMain');
     if (!teacher) return unauthorized(res, 'Teacher not found');
 
     if (teacher.status !== 'active') {
@@ -159,6 +180,7 @@ exports.protectTeacher = async (req, res, next) => {
     }
 
     req.teacher = teacher;
+    req.branchFilter = { branchId: teacher.branchId._id };
     next();
   } catch (e) {
     return res.status(401).json({

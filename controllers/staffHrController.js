@@ -17,11 +17,24 @@ const mongoose = require('mongoose');
 
 const getSchoolId = (req) => req.admin.schoolId._id || req.admin.schoolId;
 
+const schoolAndBranchFilter = (req) => ({
+  schoolId: getSchoolId(req),
+  ...(req.branchFilter || {})
+});
+
+// Department/StaffRole: show school-wide (branchId null) + current branch when admin is branch-level
+const departmentRoleFilter = (req) => {
+  const filter = { schoolId: getSchoolId(req) };
+  if (req.branchFilter && req.branchFilter.branchId) {
+    filter.branchId = { $in: [null, req.branchFilter.branchId] };
+  }
+  return filter;
+};
+
 exports.listStaff = async (req, res) => {
   try {
-    const schoolId = getSchoolId(req);
     const { page = 1, limit = 10, search = '', department, status } = req.query;
-    const filter = { schoolId };
+    const filter = schoolAndBranchFilter(req);
     if (department) filter.departmentId = department;
     if (status) filter.status = status;
     if (search) {
@@ -49,8 +62,7 @@ exports.listStaff = async (req, res) => {
 
 exports.getStaff = async (req, res) => {
   try {
-    const schoolId = getSchoolId(req);
-    const staff = await Staff.findOne({ _id: req.params.id, schoolId }).populate('departmentId').populate('roleId').lean();
+    const staff = await Staff.findOne({ _id: req.params.id, ...schoolAndBranchFilter(req) }).populate('departmentId').populate('roleId').lean();
     if (!staff) return res.status(404).json({ success: false, message: 'Staff not found' });
     res.json({ success: true, data: staff });
   } catch (error) {
@@ -60,8 +72,13 @@ exports.getStaff = async (req, res) => {
 
 exports.createStaff = async (req, res) => {
   try {
-    const schoolId = getSchoolId(req);
-    const staff = await Staff.create({ ...req.body, schoolId });
+    if (!req.body.branchId) {
+      return res.status(400).json({ success: false, message: 'branchId is required' });
+    }
+    if (req.branchFilter && req.branchFilter.branchId && req.branchFilter.branchId.toString() !== req.body.branchId.toString()) {
+      return res.status(403).json({ success: false, message: 'You can only create staff in your branch' });
+    }
+    const staff = await Staff.create({ ...req.body, schoolId: getSchoolId(req) });
     res.status(201).json({ success: true, data: staff, message: 'Staff created' });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error creating staff', error: error.message });
@@ -70,8 +87,7 @@ exports.createStaff = async (req, res) => {
 
 exports.updateStaff = async (req, res) => {
   try {
-    const schoolId = getSchoolId(req);
-    const staff = await Staff.findOneAndUpdate({ _id: req.params.id, schoolId }, req.body, { new: true });
+    const staff = await Staff.findOneAndUpdate({ _id: req.params.id, ...schoolAndBranchFilter(req) }, req.body, { new: true });
     if (!staff) return res.status(404).json({ success: false, message: 'Staff not found' });
     res.json({ success: true, data: staff, message: 'Staff updated' });
   } catch (error) {
@@ -81,8 +97,7 @@ exports.updateStaff = async (req, res) => {
 
 exports.deleteStaff = async (req, res) => {
   try {
-    const schoolId = getSchoolId(req);
-    const staff = await Staff.findOneAndDelete({ _id: req.params.id, schoolId });
+    const staff = await Staff.findOneAndDelete({ _id: req.params.id, ...schoolAndBranchFilter(req) });
     if (!staff) return res.status(404).json({ success: false, message: 'Staff not found' });
     res.json({ success: true, message: 'Staff deleted' });
   } catch (error) {
@@ -92,8 +107,8 @@ exports.deleteStaff = async (req, res) => {
 
 exports.listDepartments = async (req, res) => {
   try {
-    const schoolId = getSchoolId(req);
-    const data = await Department.find({ schoolId }).lean();
+    const filter = departmentRoleFilter(req);
+    const data = await Department.find(filter).populate('branchId', 'name city isMain').lean();
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error listing departments', error: error.message });
@@ -102,8 +117,12 @@ exports.listDepartments = async (req, res) => {
 
 exports.createDepartment = async (req, res) => {
   try {
-    const schoolId = getSchoolId(req);
-    const dept = await Department.create({ ...req.body, schoolId });
+    const sid = getSchoolId(req);
+    const branchId = req.body.branchId !== undefined ? req.body.branchId : null;
+    if (req.branchFilter && req.branchFilter.branchId && branchId && branchId.toString() !== req.branchFilter.branchId.toString()) {
+      return res.status(403).json({ success: false, message: 'You can only create departments in your branch or school-wide (null)' });
+    }
+    const dept = await Department.create({ ...req.body, schoolId: sid, branchId: branchId || undefined });
     res.status(201).json({ success: true, data: dept });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error creating department', error: error.message });
@@ -112,8 +131,8 @@ exports.createDepartment = async (req, res) => {
 
 exports.listRoles = async (req, res) => {
   try {
-    const schoolId = getSchoolId(req);
-    const data = await StaffRole.find({ schoolId }).populate('departmentId', 'name').lean();
+    const filter = departmentRoleFilter(req);
+    const data = await StaffRole.find(filter).populate('departmentId', 'name').populate('branchId', 'name city isMain').lean();
     res.json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error listing roles', error: error.message });
@@ -122,8 +141,12 @@ exports.listRoles = async (req, res) => {
 
 exports.createRole = async (req, res) => {
   try {
-    const schoolId = getSchoolId(req);
-    const role = await StaffRole.create({ ...req.body, schoolId });
+    const sid = getSchoolId(req);
+    const branchId = req.body.branchId !== undefined ? req.body.branchId : null;
+    if (req.branchFilter && req.branchFilter.branchId && branchId && branchId.toString() !== req.branchFilter.branchId.toString()) {
+      return res.status(403).json({ success: false, message: 'You can only create roles in your branch or school-wide (null)' });
+    }
+    const role = await StaffRole.create({ ...req.body, schoolId: sid, branchId: branchId || undefined });
     res.status(201).json({ success: true, data: role });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error creating role', error: error.message });
@@ -253,7 +276,7 @@ exports.generateStaffPayroll = async (req, res) => {
   try {
     const schoolId = getSchoolId(req);
     const { month, year, staffIds } = req.body;
-    const staffList = staffIds && staffIds.length ? await Staff.find({ schoolId, _id: { $in: staffIds } }).select('_id') : await Staff.find({ schoolId }).select('_id');
+    const staffList = staffIds && staffIds.length ? await Staff.find({ ...schoolAndBranchFilter(req), _id: { $in: staffIds } }).select('_id') : await Staff.find(schoolAndBranchFilter(req)).select('_id');
     const created = [];
     for (const s of staffList) {
       const existing = await StaffPayroll.findOne({ schoolId, staffId: s._id, month, year });
@@ -363,7 +386,7 @@ exports.bulkImportStaff = async (req, res) => {
     }
     const created = [];
     for (const s of staffList) {
-      const staff = await Staff.create({ ...s, schoolId });
+      const staff = await Staff.create({ ...s, schoolId: getSchoolId(req), branchId: s.branchId });
       created.push(staff);
     }
     res.status(201).json({ success: true, data: created, message: `${created.length} staff imported` });

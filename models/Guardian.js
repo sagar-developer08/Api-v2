@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+// Design: Guardian has no branchId. Guardians are linked to a Student; branch
+// context is derived from the student's branchId. Scoping is by schoolId only.
 const guardianSchema = new mongoose.Schema({
   schoolId: {
     type: mongoose.Schema.Types.ObjectId,

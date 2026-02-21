@@ -16,6 +16,11 @@ const studentSchema = new mongoose.Schema({
     ref: 'School',
     required: true
   },
+  branchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch',
+    required: true
+  },
   studentId: {
     type: String,
     trim: true,
@@ -155,8 +160,10 @@ studentSchema.methods.comparePassword = async function (candidatePassword) {
 };
 
 studentSchema.index({ schoolId: 1 });
-studentSchema.index({ schoolId: 1, admissionNumber: 1 }, { unique: true });
-studentSchema.index({ schoolId: 1, studentId: 1 }, { unique: true, sparse: true });
+studentSchema.index({ branchId: 1 });
+studentSchema.index({ schoolId: 1, branchId: 1 });
+studentSchema.index({ schoolId: 1, branchId: 1, admissionNumber: 1 }, { unique: true });
+studentSchema.index({ schoolId: 1, branchId: 1, studentId: 1 }, { unique: true, sparse: true });
 studentSchema.index({ firstName: 'text', lastName: 'text', email: 'text', enrollmentNumber: 'text' });
 
 module.exports = mongoose.model('Student', studentSchema);

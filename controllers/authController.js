@@ -130,7 +130,7 @@ exports.studentLogin = async (req, res) => {
       query.admissionNumber = admissionNumber.trim();
     }
 
-    const student = await Student.findOne(query).select('+password');
+    const student = await Student.findOne(query).select('+password').populate('branchId', 'name city isMain');
     if (!student) {
       return res.status(401).json({
         success: false,
@@ -178,7 +178,9 @@ exports.studentLogin = async (req, res) => {
           sectionId: student.sectionId,
           schoolId: school._id,
           schoolName: school.schoolName,
-          schoolCode: school.schoolCode
+          schoolCode: school.schoolCode,
+          branchId: student.branchId?._id || student.branchId,
+          branchName: student.branchId?.name || null
         },
         token
       }

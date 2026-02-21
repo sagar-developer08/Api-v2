@@ -2,13 +2,18 @@ const Teacher = require('../models/Teacher');
 const AcademicYear = require('../models/AcademicYear');
 const mongoose = require('mongoose');
 
+const schoolAndBranchQuery = (req) => ({
+  schoolId: req.admin.schoolId,
+  ...(req.branchFilter || {})
+});
+
 // @desc    Get All Teachers
 // @route   GET /api/academic/teachers
 // @access  Private
 exports.getAllTeachers = async (req, res) => {
   try {
     const { search, page = 1, limit = 10, academicYear } = req.query;
-    const query = { schoolId: req.admin.schoolId };
+    const query = schoolAndBranchQuery(req);
 
     if (academicYear) {
       const academicYearDoc = await AcademicYear.findById(academicYear);
@@ -68,7 +73,7 @@ exports.getAllTeachers = async (req, res) => {
 // @access  Private
 exports.getTeacherById = async (req, res) => {
   try {
-    const teacher = await Teacher.findOne({ _id: req.params.id, schoolId: req.admin.schoolId });
+    const teacher = await Teacher.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) });
     if (!teacher) {
       return res.status(404).json({ success: false, message: 'Teacher not found' });
     }
@@ -83,10 +88,13 @@ exports.getTeacherById = async (req, res) => {
 // @access  Private
 exports.createTeacher = async (req, res) => {
   try {
+    if (!req.body.branchId) {
+      return res.status(400).json({ success: false, message: 'branchId is required' });
+    }
+    if (req.branchFilter && req.branchFilter.branchId && req.branchFilter.branchId.toString() !== req.body.branchId.toString()) {
+      return res.status(403).json({ success: false, message: 'You can only create teachers in your branch' });
+    }
     req.body.schoolId = req.admin.schoolId;
-
-    // Check for duplicate email within the school (or globally if required, model says unique so likely global or school specific logic handled by indexing failure)
-    // Model says email unique: true.
 
     const teacher = await Teacher.create(req.body);
 
@@ -112,7 +120,7 @@ exports.createTeacher = async (req, res) => {
 // @access  Private
 exports.updateTeacher = async (req, res) => {
   try {
-    let teacher = await Teacher.findOne({ _id: req.params.id, schoolId: req.admin.schoolId });
+    let teacher = await Teacher.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) });
     if (!teacher) {
       return res.status(404).json({ success: false, message: 'Teacher not found' });
     }
@@ -140,7 +148,7 @@ exports.updateTeacher = async (req, res) => {
 // @access  Private
 exports.deleteTeacher = async (req, res) => {
   try {
-    const teacher = await Teacher.findOne({ _id: req.params.id, schoolId: req.admin.schoolId });
+    const teacher = await Teacher.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) });
     if (!teacher) {
       return res.status(404).json({ success: false, message: 'Teacher not found' });
     }

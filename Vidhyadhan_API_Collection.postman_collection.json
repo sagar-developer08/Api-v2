@@ -1,0 +1,1758 @@
+{
+  "info": {
+    "name": "Vidhyadhan API Collection",
+    "description": "Complete API collection for all Vidhyadhan routes. Multi-branch: set baseUrl (e.g. http://localhost:3000 or http://localhost:8080), token (Bearer after login), schoolId and branchId. Create Student/Teacher/Staff/Class/Section/Subject require branchId. Student login response includes branchId and branchName.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "token", "value": "" },
+    { "key": "schoolId", "value": "" },
+    { "key": "branchId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/health",
+            "description": "Check API health status"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "originalRequest": { "method": "GET", "url": "{{baseUrl}}/api/health" },
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"API is running\",\n  \"timestamp\": \"2025-02-19T00:00:00.000Z\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Auth (api/v1/auth)",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolName\": \"Test School\",\n  \"adminName\": \"John Doe\",\n  \"mobileNumber\": \"9876543210\",\n  \"email\": \"admin@school.com\",\n  \"password\": \"Password123\",\n  \"confirmPassword\": \"Password123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "description": "Register a new school. Body: schoolName, adminName, mobileNumber (10 digits), email, password (min 8 chars, 1 letter, 1 number), confirmPassword"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP sent to your email. Verify to complete registration.\",\n  \"data\": {\n    \"email\": \"admin@school.com\",\n    \"mobileNumber\": \"9876543210\",\n    \"expiresAt\": \"2025-02-19T00:15:00.000Z\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@school.com\",\n  \"otp\": \"123456\",\n  \"schoolName\": \"Test School\",\n  \"adminName\": \"John Doe\",\n  \"mobileNumber\": \"9876543210\",\n  \"password\": \"Password123\",\n  \"confirmPassword\": \"Password123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/verify-otp",
+            "description": "Verify OTP and complete registration. Body: email, otp (6 digits), schoolName, adminName, mobileNumber, password, confirmPassword"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Registration successful\",\n  \"data\": {\n    \"admin\": { \"id\": \"...\", \"email\": \"...\", \"schoolId\": \"...\" },\n    \"school\": { \"id\": \"...\", \"schoolCode\": \"...\", \"status\": \"Pending Setup\" },\n    \"token\": \"jwt_token_here\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@school.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/resend-otp",
+            "description": "Resend OTP to email"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"OTP resent successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login (School Admin)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolCode\": \"SCH001\",\n  \"email\": \"admin@school.com\",\n  \"password\": \"Password123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "description": "School admin login. Body: schoolCode, email, password"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"admin\": { \"id\": \"...\", \"email\": \"...\", \"schoolId\": \"...\" },\n    \"token\": \"jwt_token_here\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Student Login",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolCode\": \"SCH001\",\n  \"email\": \"student@school.com\",\n  \"admissionNumber\": \"ADM001\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/student-login",
+            "description": "Student login. Body: schoolCode, password, and either email OR admissionNumber. Response includes branchId and branchName."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"student\": {\n      \"id\": \"...\",\n      \"admissionNumber\": \"...\",\n      \"firstName\": \"...\",\n      \"schoolId\": \"...\",\n      \"schoolName\": \"...\",\n      \"schoolCode\": \"...\",\n      \"branchId\": \"...\",\n      \"branchName\": \"...\"\n    },\n    \"token\": \"jwt_token_here\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Teacher Login",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolCode\": \"SCH001\",\n  \"email\": \"teacher@school.com\",\n  \"employeeId\": \"EMP001\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/teacher-login",
+            "description": "Teacher login. Body: schoolCode, password, and either email OR employeeId"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": {\n    \"teacher\": { \"id\": \"...\", \"employeeId\": \"...\", \"email\": \"...\" },\n    \"token\": \"jwt_token_here\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Parent Login",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolCode\": \"SCH001\",\n  \"email\": \"parent@school.com\",\n  \"password\": \"password123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/parent-login",
+            "description": "Parent login"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Login successful\",\n  \"data\": { \"parent\": {...}, \"token\": \"jwt_token_here\" }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@school.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/forgot-password",
+            "description": "Request password reset. Body: email"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Password reset email sent\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"reset_token_from_email\",\n  \"password\": \"NewPassword123\",\n  \"confirmPassword\": \"NewPassword123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/reset-password",
+            "description": "Reset password with token. Body: token, password, confirmPassword"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Password reset successful\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/auth/profile",
+            "description": "Get current user profile. Requires: Authorization Bearer token"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"id\": \"...\",\n    \"email\": \"...\",\n    \"schoolId\": \"...\",\n    \"role\": \"admin\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Schools Setup Wizard (api/v1/schools)",
+      "item": [
+        {
+          "name": "Get Setup Wizard",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/schools/{{schoolId}}/setup-wizard",
+            "description": "Get setup wizard state. Requires: protect"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"currentStep\": 1,\n    \"step1\": {...},\n    \"step2\": {...},\n    \"step3\": {...}\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Setup Step 1 - Basic Info",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolName\": \"Test School\",\n  \"schoolType\": \"School\",\n  \"boardCurriculum\": \"CBSE\",\n  \"country\": \"India\",\n  \"state\": \"Karnataka\",\n  \"city\": \"Bangalore\",\n  \"timezone\": \"Asia/Kolkata\",\n  \"academicYearStartMonth\": \"April\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/schools/{{schoolId}}/setup-wizard/step/1",
+            "description": "Step 1: Basic info. schoolType: School|College|Institute, academicYearStartMonth: January-December"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Step 1 updated\",\n  \"data\": {...}\n}"
+            }
+          ]
+        },
+        {
+          "name": "Setup Step 2 - Academic Structure",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"academicYear\": \"2025-2026\",\n  \"classesOffered\": [\"Class 1\", \"Class 2\", \"Class 3\"],\n  \"defaultSections\": [\"A\", \"B\"]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/schools/{{schoolId}}/setup-wizard/step/2",
+            "description": "Step 2: academicYear (YYYY-YYYY), classesOffered (array), defaultSections (array)"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Step 2 updated\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Setup Step 3 - Branch Setup",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branches\": [\n    { \"name\": \"Main Branch\", \"city\": \"Bangalore\", \"isMain\": true },\n    { \"name\": \"Branch 2\", \"city\": \"Mumbai\", \"isMain\": false }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/schools/{{schoolId}}/setup-wizard/step/3",
+            "description": "Step 3: branches (array of {name, city?, isMain?})"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Step 3 updated\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Finish Setup",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/schools/{{schoolId}}/setup-wizard/finish",
+            "description": "Complete setup wizard. No body"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Setup completed\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "School Profile (api/v1/school)",
+      "item": [
+        {
+          "name": "Get School Profile",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/school/profile",
+            "description": "Get complete school profile. Requires: protect, requireApprovedSchool"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"basic\": {...},\n    \"contact\": {...},\n    \"administrative\": {...},\n    \"academic\": {...},\n    \"timings\": {...},\n    \"policies\": {...}\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update School Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolName\": \"Updated School Name\",\n  \"primaryEmail\": \"contact@school.com\",\n  \"primaryPhone\": \"9876543210\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/school/profile?step=basic",
+            "description": "Update profile. Query: step (basic|contact|administrative|academic|timings|policies|optional). Body varies by step"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Profile updated\",\n  \"data\": {...}\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Super Admin (api/super-admin)",
+      "item": [
+        {
+          "name": "Super Admin Login",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin@vidhyadhan.com\",\n  \"password\": \"password\"\n}"
+            },
+            "url": "{{baseUrl}}/api/super-admin/login",
+            "description": "Super admin login"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"token\": \"...\", \"user\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/super-admin/dashboard",
+            "description": "Super admin dashboard. Requires: requireSuperAdmin"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"schools\": 0, \"pendingApprovals\": 0, ... }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Schools",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/super-admin/schools",
+            "description": "List all schools"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"schools\": [...], \"total\": 0 }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create School",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolName\": \"New School\",\n  \"schoolCode\": \"SCH002\",\n  \"adminEmail\": \"admin@newschool.com\",\n  \"adminName\": \"Admin Name\"\n}"
+            },
+            "url": "{{baseUrl}}/api/super-admin/schools",
+            "description": "Create school (super admin)"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"school\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get School",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/super-admin/schools/{{schoolId}}",
+            "description": "Get school by ID"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"school\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update School",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schoolName\": \"Updated Name\",\n  \"status\": \"Approved\"\n}"
+            },
+            "url": "{{baseUrl}}/api/super-admin/schools/{{schoolId}}",
+            "description": "Update school"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"school\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete School",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/super-admin/schools/{{schoolId}}",
+            "description": "Delete school"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"School deleted\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Approve School",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"remarks\": \"Approved after verification\"\n}"
+            },
+            "url": "{{baseUrl}}/api/super-admin/schools/{{schoolId}}/approve",
+            "description": "Approve school. Body: remarks (optional)"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"School approved\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Reject School",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"remarks\": \"Documents incomplete\"\n}"
+            },
+            "url": "{{baseUrl}}/api/super-admin/schools/{{schoolId}}/reject",
+            "description": "Reject school. Body: remarks (optional)"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"School rejected\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Classes (api/admin/classes)",
+      "item": [
+        {
+          "name": "Get All Classes",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/admin/classes",
+            "description": "List all classes. Requires: protect"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"classes\": [...], \"total\": 0 }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Class",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": \"{{branchId}}\",\n  \"name\": \"Class 1\",\n  \"academicYearId\": \"academic_year_mongo_id\",\n  \"section\": \"A\",\n  \"maxStudents\": 40\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/classes",
+            "description": "Create class. Required: branchId (ObjectId). Branch-level admin can only use their branchId. Optional: subjects (array of subject names or IDs)."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"class\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Class By ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/admin/classes/:id",
+            "description": "Get class by ID"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"class\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Class",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Class 1 A\",\n  \"capacity\": 45\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/classes/:id",
+            "description": "Update class"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"class\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Class",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/admin/classes/:id",
+            "description": "Delete class"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Class deleted\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Bulk Import Classes",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{"key": "file", "type": "file", "src": ""}]
+            },
+            "url": "{{baseUrl}}/api/admin/classes/bulk-import",
+            "description": "Bulk import classes from file"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"imported\": 10, \"errors\": [] }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Students Admin (api/admin/students)",
+      "item": [
+        {
+          "name": "Get All Students",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/admin/students?page=1&limit=20&search=&classId=&sectionId=&status=active",
+            "description": "List students (branch-filtered for branch-level admin). Query: page, limit, search, classId, sectionId, status, academicYear, sortBy, sortOrder"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"students\": [...], \"total\": 0, \"page\": 1, \"pages\": 1 }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": \"{{branchId}}\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"middleName\": \"\",\n  \"email\": \"john@school.com\",\n  \"phone\": \"9876543210\",\n  \"dateOfBirth\": \"2010-05-15\",\n  \"gender\": \"male\",\n  \"bloodGroup\": \"O+\",\n  \"classId\": \"class_mongo_id\",\n  \"sectionId\": \"section_mongo_id\",\n  \"rollNumber\": \"1\",\n  \"admissionNumber\": \"ADM001\",\n  \"admissionDate\": \"2024-04-01\",\n  \"academicYearId\": \"academic_year_mongo_id\",\n  \"address\": { \"line1\": \"...\", \"city\": \"...\", \"state\": \"...\", \"pincode\": \"...\", \"country\": \"...\" }\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/students",
+            "description": "Create student. Required: branchId (ObjectId), firstName, lastName, dateOfBirth, gender, classId, sectionId, admissionNumber. Gender: Male|Female|Other. Branch-level admin can only use their branchId."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"student\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Student By ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/admin/students/:id",
+            "description": "Get student by ID"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"student\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Student",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john@school.com\",\n  \"phone\": \"9876543210\",\n  \"dateOfBirth\": \"2010-05-15\",\n  \"gender\": \"male\",\n  \"classId\": \"...\",\n  \"sectionId\": \"...\",\n  \"status\": \"active\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/students/:id",
+            "description": "Update student. Status: active|inactive|graduated|transferred|suspended"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"student\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Add Guardian",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"father\",\n  \"name\": \"Robert Doe\",\n  \"relationship\": \"Father\",\n  \"phone\": \"9876543210\",\n  \"email\": \"robert@email.com\",\n  \"address\": \"123 Street\",\n  \"occupation\": \"Engineer\",\n  \"isPrimary\": true,\n  \"isEmergencyContact\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/students/:id/guardians",
+            "description": "Add guardian. type: father|mother|guardian"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"guardian\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Record Fee Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 5000,\n  \"paymentDate\": \"2025-02-19\",\n  \"mode\": \"online\",\n  \"transactionId\": \"TXN123\",\n  \"remarks\": \"Tuition fee\"\n}"
+            },
+            "url": "{{baseUrl}}/api/admin/students/:id/fees/:feeId/payments",
+            "description": "Record fee payment. mode: cash|online|cheque|dd|bank-transfer|upi"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"payment\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Bulk Import Students",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "body": {
+              "mode": "formdata",
+              "formdata": [{"key": "file", "type": "file", "src": ""}]
+            },
+            "url": "{{baseUrl}}/api/admin/students/bulk-import",
+            "description": "Bulk import students (multipart/form-data, file)"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"imported\": 50, \"errors\": [] }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Teachers (api/academic/teachers)",
+      "item": [
+        {
+          "name": "Get All Teachers",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/academic/teachers?page=1&limit=20",
+            "description": "List all teachers (branch-filtered for branch-level admin)"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"teachers\": [...], \"total\": 0 }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Teacher",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": \"{{branchId}}\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"email\": \"jane@school.com\",\n  \"employeeId\": \"EMP001\",\n  \"designation\": \"Senior Teacher\",\n  \"phone\": \"9876543210\"\n}"
+            },
+            "url": "{{baseUrl}}/api/academic/teachers",
+            "description": "Create teacher. Required: branchId (ObjectId). Branch-level admin can only use their branchId."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"teacher\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Teacher By ID",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/academic/teachers/:id",
+            "description": "Get teacher by ID"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"teacher\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Teacher",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"designation\": \"Lead Teacher\"\n}" },
+            "url": "{{baseUrl}}/api/academic/teachers/:id",
+            "description": "Update teacher"
+          },
+          "response": [{ "name": "Success", "status": "OK", "code": 200, "body": "{\n  \"success\": true,\n  \"data\": { \"teacher\": {...} }\n}" }]
+        },
+        {
+          "name": "Delete Teacher",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/academic/teachers/:id",
+            "description": "Delete teacher"
+          },
+          "response": [{ "name": "Success", "status": "OK", "code": 200, "body": "{\n  \"success\": true,\n  \"message\": \"Teacher deleted\"\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "Academic (api/academic)",
+      "item": [
+        {
+          "name": "Get Students",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/academic/students?page=1&limit=20",
+            "description": "List students (branch-filtered). Query: page, limit, search, classId, sectionId, status, academicYear"
+          },
+          "response": [{ "name": "Success", "status": "OK", "code": 200, "body": "{\n  \"success\": true,\n  \"data\": [...],\n  \"total\": 0,\n  \"page\": 1,\n  \"totalPages\": 0\n}" }]
+        },
+        {
+          "name": "Create Student (Academic)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": \"{{branchId}}\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john@school.com\",\n  \"classId\": \"class_mongo_id\",\n  \"sectionId\": \"section_mongo_id\",\n  \"admissionNumber\": \"ADM002\",\n  \"dateOfBirth\": \"2010-05-15\",\n  \"gender\": \"male\"\n}"
+            },
+            "url": "{{baseUrl}}/api/academic/students",
+            "description": "Create student. Required: branchId, firstName, lastName, classId, sectionId, admissionNumber, dateOfBirth, gender"
+          },
+          "response": [{ "name": "Success", "status": "OK", "code": 201, "body": "{\n  \"success\": true,\n  \"data\": {...}\n}" }]
+        },
+        {
+          "name": "Get Sections",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/academic/sections",
+            "description": "List sections (branch-filtered)"
+          },
+          "response": [{ "name": "Success", "status": "OK", "code": 200, "body": "{\n  \"success\": true,\n  \"data\": [...]\n}" }]
+        },
+        {
+          "name": "Create Section",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": \"{{branchId}}\",\n  \"classId\": \"class_mongo_id\",\n  \"name\": \"A\",\n  \"code\": \"A\",\n  \"capacity\": 40\n}"
+            },
+            "url": "{{baseUrl}}/api/academic/sections",
+            "description": "Create section. Required: branchId, classId, name, code"
+          },
+          "response": [{ "name": "Success", "status": "OK", "code": 201, "body": "{\n  \"success\": true,\n  \"data\": {...}\n}" }]
+        },
+        {
+          "name": "Get Subjects",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/academic/subjects",
+            "description": "List subjects (branch-filtered)"
+          },
+          "response": [{ "name": "Success", "status": "OK", "code": 200, "body": "{\n  \"success\": true,\n  \"data\": [...]\n}" }]
+        },
+        {
+          "name": "Create Subject",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": \"{{branchId}}\",\n  \"name\": \"Mathematics\",\n  \"code\": \"MATH\",\n  \"type\": \"Theory\"\n}"
+            },
+            "url": "{{baseUrl}}/api/academic/subjects",
+            "description": "Create subject. Required: branchId. type: Theory|Practical|Both"
+          },
+          "response": [{ "name": "Success", "status": "OK", "code": 201, "body": "{\n  \"success\": true,\n  \"data\": {...}\n}" }]
+        }
+      ]
+    },
+    {
+      "name": "Fees Management (api/v1/fees)",
+      "item": [
+        {
+          "name": "Get Fees Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/fees/dashboard",
+            "description": "Fees dashboard. Requires: protect, requireApprovedSchool"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"totalCollected\": 0, \"pending\": 0, ... }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Fee Heads",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/fees/heads",
+            "description": "List fee heads"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"heads\": [...] }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Fee Head",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tuition Fee\",\n  \"code\": \"TUIT\",\n  \"amount\": 5000,\n  \"frequency\": \"monthly\",\n  \"description\": \"Monthly tuition\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/fees/heads",
+            "description": "Create fee head"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"head\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Assign Fee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"student_id\",\n  \"feeHeadId\": \"fee_head_id\",\n  \"amount\": 5000,\n  \"dueDate\": \"2025-03-31\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/fees/assignments",
+            "description": "Assign fee to student"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"assignment\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Gateway Callback (No Auth)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"transactionId\": \"...\",\n  \"status\": \"success\",\n  \"amount\": 5000,\n  \"paymentId\": \"...\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/fees/payments/gateway-callback",
+            "description": "Payment gateway webhook - no auth. Body structure depends on gateway"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"message\": \"Callback processed\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Transport (api/v1/transport)",
+      "item": [
+        {
+          "name": "Get Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/transport/dashboard",
+            "description": "Transport dashboard"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"vehicles\": 0, \"routes\": 0, ... }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Vehicles",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/transport/vehicles",
+            "description": "List vehicles"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"vehicles\": [...] }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Vehicle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vehicleNumber\": \"KA01AB1234\",\n  \"type\": \"bus\",\n  \"capacity\": 40,\n  \"model\": \"Tata\",\n  \"driverId\": \"driver_id\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/transport/vehicles",
+            "description": "Create vehicle"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"vehicle\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Route",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Route 1\",\n  \"vehicleId\": \"vehicle_id\",\n  \"stops\": [\n    { \"name\": \"Stop 1\", \"time\": \"07:00\", \"latitude\": 12.97, \"longitude\": 77.59 }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/transport/routes",
+            "description": "Create transport route"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"route\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Assign Student to Route",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"student_id\",\n  \"routeId\": \"route_id\",\n  \"pickupPoint\": \"Stop 1\",\n  \"dropPoint\": \"School\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/transport/student-mapping",
+            "description": "Assign student to transport route"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"mapping\": {...} }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "LMS (api/v1/lms)",
+      "item": [
+        {
+          "name": "Get LMS Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/lms/dashboard",
+            "description": "LMS dashboard"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"courses\": 0, \"content\": 0, ... }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Courses",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/lms/courses",
+            "description": "List courses"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"courses\": [...] }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mathematics 101\",\n  \"description\": \"Basic math course\",\n  \"subjectId\": \"subject_id\",\n  \"classIds\": [\"class_id\"],\n  \"status\": \"draft\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/lms/courses",
+            "description": "Create course"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"course\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Content",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Chapter 1\",\n  \"type\": \"video\",\n  \"courseId\": \"course_id\",\n  \"url\": \"https://...\",\n  \"duration\": 600\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/lms/content",
+            "description": "Create content. type: video|pdf|link|quiz"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"content\": {...} }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Marketing (api/v1/marketing)",
+      "item": [
+        {
+          "name": "Get Home (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/marketing/home",
+            "description": "Get marketing home - public, no auth"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"hero\": {...}, \"features\": [...] }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Lead (Public)",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"phone\": \"9876543210\",\n  \"schoolName\": \"Prospective School\",\n  \"message\": \"Interested in demo\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/marketing/leads",
+            "description": "Create lead - public, no auth"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"lead\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Leads (Super Admin)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/marketing/leads",
+            "description": "List leads. Requires: requireSuperAdmin"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"leads\": [...], \"total\": 0 }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Student App (api/v1/student)",
+      "item": [
+        {
+          "name": "Get Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/student/dashboard",
+            "description": "Student dashboard. Requires: protectStudent"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"stats\": {...}, \"upcoming\": [...] }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/student/profile",
+            "description": "Get student profile"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"student\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Submit Assignment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Assignment submission text\",\n  \"attachments\": [\"url1\", \"url2\"]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/student/assignments/:assignmentId/submit",
+            "description": "Submit assignment"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"submission\": {...} }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Teacher App (api/v1/teacher)",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/teacher/dashboard/stats",
+            "description": "Teacher dashboard. Requires: protectTeacher"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"classes\": 0, \"students\": 0, ... }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Assignment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Math Homework\",\n  \"description\": \"Complete problems 1-10\",\n  \"classId\": \"class_id\",\n  \"subjectId\": \"subject_id\",\n  \"dueDate\": \"2025-02-25\",\n  \"maxMarks\": 20\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/teacher/assignments",
+            "description": "Create assignment"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"assignment\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Mark Bulk Attendance",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"classId\": \"class_id\",\n  \"date\": \"2025-02-19\",\n  \"attendance\": [\n    { \"studentId\": \"student_id\", \"status\": \"present\" }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/teacher/attendance/bulk",
+            "description": "Mark bulk attendance. status: present|absent|late|on-leave|half-day"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"marked\": 30, \"errors\": [] }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Admin App (api/v1/admin)",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/admin/dashboard/stats",
+            "description": "Admin dashboard. Requires: protect, requireApprovedSchool"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"students\": 0, \"teachers\": 0, \"classes\": 0, ... }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": \"{{branchId}}\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"dateOfBirth\": \"2010-05-15\",\n  \"gender\": \"male\",\n  \"classId\": \"class_id\",\n  \"sectionId\": \"section_id\",\n  \"admissionNumber\": \"ADM001\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/admin/students",
+            "description": "Create student via admin app. Required: branchId (ObjectId)."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"student\": {...} }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Parent App (api/v1/parent)",
+      "item": [
+        {
+          "name": "Get Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/parent/dashboard",
+            "description": "Parent dashboard. Requires: protectParent"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"children\": [...], \"notices\": [...] }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Children",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/parent/children",
+            "description": "List linked children"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"children\": [...] }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Pay Child Fee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"feeId\": \"fee_id\",\n  \"amount\": 5000,\n  \"mode\": \"online\",\n  \"transactionId\": \"TXN123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/parent/children/:childId/fees/pay",
+            "description": "Pay fee for child"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"payment\": {...} }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Staff HR (api/v1/staff)",
+      "item": [
+        {
+          "name": "List Staff",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/staff",
+            "description": "List staff. Requires: protect, requireApprovedSchool"
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"staff\": [...] }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Staff",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": \"{{branchId}}\",\n  \"firstName\": \"Staff\",\n  \"lastName\": \"Member\",\n  \"email\": \"staff@school.com\",\n  \"departmentId\": \"dept_id\",\n  \"roleId\": \"role_id\",\n  \"phone\": \"9876543210\",\n  \"joinDate\": \"2025-01-01\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/staff",
+            "description": "Create staff member. Required: branchId (ObjectId). Branch-level admin can only use their branchId."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 201,
+              "body": "{\n  \"success\": true,\n  \"data\": { \"staff\": {...} }\n}"
+            }
+          ]
+        },
+        {
+          "name": "List Departments",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/staff/departments",
+            "description": "List departments (school-wide + branch-specific for branch admin)"
+          },
+          "response": [{ "name": "Success", "status": "OK", "code": 200, "body": "{\n  \"success\": true,\n  \"data\": [...]\n}" }]
+        },
+        {
+          "name": "Create Department",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": null,\n  \"name\": \"Human Resources\",\n  \"code\": \"HR\",\n  \"description\": \"HR department\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/staff/departments",
+            "description": "Create department. branchId: null = school-wide, or set ObjectId for branch-specific. Branch admin can only use their branchId or null."
+          },
+          "response": [{ "name": "Success", "status": "OK", "code": 201, "body": "{\n  \"success\": true,\n  \"data\": {...}\n}" }]
+        },
+        {
+          "name": "List Roles",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer {{token}}"}],
+            "url": "{{baseUrl}}/api/v1/staff/roles",
+            "description": "List staff roles (school-wide + branch-specific for branch admin)"
+          },
+          "response": [{ "name": "Success", "status": "OK", "code": 200, "body": "{\n  \"success\": true,\n  \"data\": [...]\n}" }]
+        },
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Authorization", "value": "Bearer {{token}}"},
+              {"key": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"branchId\": null,\n  \"name\": \"Receptionist\",\n  \"departmentId\": \"dept_mongo_id\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/staff/roles",
+            "description": "Create role. branchId: null = school-wide, or set ObjectId for branch-specific."
+          },
+          "response": [{ "name": "Success", "status": "OK", "code": 201, "body": "{\n  \"success\": true,\n  \"data\": {...}\n}" }]
+        }
+      ]
+    }
+  ]
+}

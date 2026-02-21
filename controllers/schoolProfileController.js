@@ -1,5 +1,6 @@
 const School = require('../models/School');
 const AcademicYear = require('../models/AcademicYear');
+const Branch = require('../models/Branch');
 
 /**
  * Helper function to format school data into wizard step groups
@@ -113,12 +114,38 @@ exports.getSchoolProfile = async (req, res) => {
             });
         }
 
-        // Fetch academic years for this school
-        const academicYears = await AcademicYear.find({ schoolId: school._id })
-            .sort({ startYear: -1 })
-            .lean();
+        // Fetch academic years and branches for this school
+        const [academicYears, branches] = await Promise.all([
+            AcademicYear.find({ schoolId: school._id })
+                .sort({ startYear: -1 })
+                .lean(),
+            Branch.find({ schoolId: school._id })
+                .select('name city isMain')
+                .sort({ isMain: -1, name: 1 })
+                .lean()
+        ]);
 
         const profileData = formatSchoolProfile(school, academicYears);
+
+        // Resolve branch context for the logged-in admin (if any)
+        // admin.branchId might be populated as an object from middleware, or just an ObjectId
+        let adminBranch = null;
+        if (req.admin.branchId) {
+            if (typeof req.admin.branchId === 'object' && req.admin.branchId._id) {
+                // Already populated
+                adminBranch = req.admin.branchId;
+            } else {
+                // Find the branch from the fetched branches
+                adminBranch = branches.find(b => String(b._id) === String(req.admin.branchId)) || null;
+            }
+        }
+
+        // Resolve a "current" academic year for convenience (default or latest)
+        let currentAcademicYear = null;
+        if (academicYears.length) {
+            currentAcademicYear =
+                academicYears.find((ay) => ay.isDefault) || academicYears[0];
+        }
 
         res.status(200).json({
             success: true,
@@ -129,7 +156,26 @@ exports.getSchoolProfile = async (req, res) => {
                     status: school.status,
                     setupWizardStep: school.setupWizardStep,
                     isSetup: school.isSetup,
-                    updatedAt: school.updatedAt
+                    updatedAt: school.updatedAt,
+                    // All branches for the school
+                    branches: branches.map(b => ({
+                        _id: b._id,
+                        name: b.name,
+                        city: b.city,
+                        isMain: b.isMain
+                    })),
+                    // Current admin's branch context (if any)
+                    branch: adminBranch
+                        ? {
+                            _id: adminBranch._id,
+                            name: adminBranch.name,
+                            city: adminBranch.city,
+                            isMain: adminBranch.isMain
+                        }
+                        : null,
+                    branchId: adminBranch ? adminBranch._id : null,
+                    academicYearId: currentAcademicYear ? currentAcademicYear._id : null,
+                    academicYearLabel: currentAcademicYear ? currentAcademicYear.label : null
                 }
             }
         });
@@ -238,6 +284,127 @@ exports.updateSchoolProfile = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Error updating school profile',
+            error: error.message
+        });
+    }
+};
+
+/**
+ * GET /api/v1/school/profile/by-branch
+ * Fetch school profile with explicit branch + academic year context.
+ * Query params (all optional):
+ *   - branchId: ObjectId of the branch. If omitted, uses admin.branchId (if any).
+ *   - academicYearId: ObjectId of academic year. If omitted, picks default/latest for the chosen branch.
+ */
+exports.getSchoolProfileByBranch = async (req, res) => {
+    try {
+        const admin = req.admin;
+        if (!admin || !admin.schoolId) {
+            return res.status(403).json({
+                success: false,
+                message: 'School admin access required'
+            });
+        }
+
+        const school = await School.findById(admin.schoolId);
+        if (!school) {
+            return res.status(404).json({
+                success: false,
+                message: 'School not found'
+            });
+        }
+
+        // Fetch all branches for the school
+        const branches = await Branch.find({ schoolId: school._id })
+            .select('name city isMain')
+            .sort({ isMain: -1, name: 1 })
+            .lean();
+
+        // Determine branch to use: query > admin.branchId (branch-level admin) > null (school-level)
+        const requestedBranchId = req.query.branchId;
+        const adminBranch = admin.branchId || null;
+        const effectiveBranchId = requestedBranchId || (adminBranch ? (typeof adminBranch === 'object' ? adminBranch._id : adminBranch) : null);
+
+        let branchDoc = null;
+        if (effectiveBranchId) {
+            branchDoc = branches.find(b => String(b._id) === String(effectiveBranchId)) || null;
+
+            if (!branchDoc) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Branch not found for this school'
+                });
+            }
+        }
+
+        // Fetch academic years for this school, optionally filtered by branch
+        const ayFilter = { schoolId: school._id };
+        if (effectiveBranchId) {
+            ayFilter.branchId = effectiveBranchId;
+        }
+
+        const academicYears = await AcademicYear.find(ayFilter)
+            .sort({ startYear: -1 })
+            .lean();
+
+        // Decide which academic year is "current" for this response
+        const requestedAcademicYearId = req.query.academicYearId;
+        let academicYearDoc = null;
+
+        if (requestedAcademicYearId) {
+            academicYearDoc = academicYears.find(
+                (ay) => String(ay._id) === String(requestedAcademicYearId)
+            ) || null;
+            if (!academicYearDoc) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Academic year not found for the given school/branch'
+                });
+            }
+        } else if (academicYears.length) {
+            academicYearDoc =
+                academicYears.find((ay) => ay.isDefault) || academicYears[0];
+        }
+
+        const profileData = formatSchoolProfile(school, academicYears);
+
+        res.status(200).json({
+            success: true,
+            data: {
+                ...profileData,
+                meta: {
+                    schoolId: school._id,
+                    status: school.status,
+                    setupWizardStep: school.setupWizardStep,
+                    isSetup: school.isSetup,
+                    updatedAt: school.updatedAt,
+                    // All branches for the school
+                    branches: branches.map(b => ({
+                        _id: b._id,
+                        name: b.name,
+                        city: b.city,
+                        isMain: b.isMain
+                    })),
+                    // Current branch context (from query or admin)
+                    branch: branchDoc
+                        ? {
+                            _id: branchDoc._id,
+                            name: branchDoc.name,
+                            city: branchDoc.city,
+                            isMain: branchDoc.isMain
+                        }
+                        : null,
+                    branchId: branchDoc ? branchDoc._id : null,
+                    academicYearId: academicYearDoc ? academicYearDoc._id : null,
+                    academicYearLabel: academicYearDoc ? academicYearDoc.label : null
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching school profile by branch:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error fetching school profile by branch',
             error: error.message
         });
     }
@@ -380,3 +547,4 @@ async function updateAllFields(school, data) {
     await updatePoliciesInfo(school, data);
     await updateOptionalInfo(school, data);
 }
+

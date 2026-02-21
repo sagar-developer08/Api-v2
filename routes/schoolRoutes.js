@@ -45,4 +45,13 @@ router.post(
   setupWizardController.finishSetup
 );
 
+// Create academic structure (classes + default sections, optional academic year) for a specific branch (e.g. second branch)
+router.post(
+  '/:schoolId/branches/:branchId/academic-structure',
+  protect,
+  validateStep2,
+  handleValidationErrors,
+  setupWizardController.createBranchAcademicStructure
+);
+
 module.exports = router;

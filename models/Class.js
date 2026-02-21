@@ -6,6 +6,11 @@ const classSchema = new mongoose.Schema({
     ref: 'School',
     required: true
   },
+  branchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch',
+    required: true
+  },
   name: {
     type: String,
     required: true,
@@ -122,6 +127,8 @@ const classSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 classSchema.index({ schoolId: 1 });
-classSchema.index({ schoolId: 1, name: 1 });
+classSchema.index({ branchId: 1 });
+classSchema.index({ schoolId: 1, branchId: 1 });
+classSchema.index({ schoolId: 1, branchId: 1, name: 1 });
 
 module.exports = mongoose.model('Class', classSchema);

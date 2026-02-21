@@ -6,6 +6,11 @@ const Teacher = require('../models/Teacher');
 const AcademicYear = require('../models/AcademicYear');
 const mongoose = require('mongoose');
 
+const schoolAndBranchQuery = (req) => ({
+  schoolId: req.admin.schoolId,
+  ...(req.branchFilter || {})
+});
+
 // @desc    Get All Classes
 // @route   GET /api/academic/classes
 // @access  Private
@@ -23,7 +28,7 @@ exports.getAllClasses = async (req, res) => {
       sortOrder = 'asc'
     } = req.query;
 
-    const query = { schoolId: req.admin.schoolId };
+    const query = schoolAndBranchQuery(req);
 
     if (grade) query.grade = grade;
     if (status) query.status = status;
@@ -54,7 +59,7 @@ exports.getAllClasses = async (req, res) => {
     // Populate student counts manually or via aggregation for better performance
     // For now, simpler map
     const data = await Promise.all(classes.map(async (cls) => {
-        const studentCount = await Student.countDocuments({ classId: cls._id, schoolId: req.admin.schoolId });
+        const studentCount = await Student.countDocuments({ classId: cls._id, ...schoolAndBranchQuery(req) });
         return {
             id: cls._id,
             name: cls.name,
@@ -100,7 +105,7 @@ exports.getAllClasses = async (req, res) => {
 // @access  Private
 exports.getClassById = async (req, res) => {
   try {
-    const cls = await Class.findOne({ _id: req.params.id, schoolId: req.admin.schoolId })
+    const cls = await Class.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) })
       .populate('teacherId', 'firstName lastName')
       .populate('academicYearId', 'label')
       .populate('subjects.subjectId', 'name code')
@@ -156,49 +161,47 @@ exports.getClassById = async (req, res) => {
 // @access  Private
 exports.createClass = async (req, res) => {
   try {
+    const branchId = req.body.branchId;
+    if (!branchId) {
+      return res.status(400).json({ success: false, message: 'branchId is required' });
+    }
+    if (req.branchFilter && req.branchFilter.branchId && req.branchFilter.branchId.toString() !== branchId.toString()) {
+      return res.status(403).json({ success: false, message: 'You can only create classes in your branch' });
+    }
     req.body.schoolId = req.admin.schoolId;
+    req.body.branchId = branchId;
 
     // Handle 'subjects' if passed as array of strings (names) or IDs
     if (req.body.subjects && Array.isArray(req.body.subjects) && req.body.subjects.length > 0) {
        const processedSubjects = [];
-       
+       const subjectQuery = { schoolId: req.admin.schoolId, branchId };
        // Get all subjects that match the names provided (if they are names)
-       // We assume if it's a valid ObjectId, it's an ID. If not, it's a name.
        const subjectNames = req.body.subjects.filter(s => !mongoose.isValidObjectId(s));
        const subjectIds = req.body.subjects.filter(s => mongoose.isValidObjectId(s));
        
-       // 1. Add direct IDs
        subjectIds.forEach(id => processedSubjects.push({ subjectId: id }));
 
-       // 2. Resolve names to IDs
        if (subjectNames.length > 0) {
-          // Find existing subjects
-          const foundSubjects = await Subject.find({ 
-              schoolId: req.admin.schoolId, 
-              name: { $in: subjectNames.map(n => new RegExp(`^${n}$`, 'i')) } // Precise Case-insensitive lookup
+          const foundSubjects = await Subject.find({
+              ...subjectQuery,
+              name: { $in: subjectNames.map(n => new RegExp(`^${n}$`, 'i')) }
           });
 
-          // Add found IDs
-          foundSubjects.forEach(sub => {
-              processedSubjects.push({ subjectId: sub._id });
-          });
+          foundSubjects.forEach(sub => processedSubjects.push({ subjectId: sub._id }));
 
-          // Identify and Create Missing Subjects
           const foundNamesLowerCase = foundSubjects.map(s => s.name.toLowerCase());
           const missingNames = subjectNames.filter(name => !foundNamesLowerCase.includes(name.toLowerCase()));
 
           if (missingNames.length > 0) {
               const newSubjectsData = missingNames.map(name => ({
                   schoolId: req.admin.schoolId,
+                  branchId,
                   name: name,
-                  code: name.substring(0, 3).toUpperCase(), // Auto-generate simple code
-                  type: 'Theory' // Default type
+                  code: name.substring(0, 3).toUpperCase(),
+                  type: 'Theory'
               }));
-              
               const createdSubjects = await Subject.insertMany(newSubjectsData);
-              createdSubjects.forEach(sub => {
-                  processedSubjects.push({ subjectId: sub._id });
-              });
+              createdSubjects.forEach(sub => processedSubjects.push({ subjectId: sub._id }));
           }
        }
 
@@ -222,7 +225,7 @@ exports.createClass = async (req, res) => {
 exports.updateClass = async (req, res) => {
   try {
     const cls = await Class.findOneAndUpdate(
-      { _id: req.params.id, schoolId: req.admin.schoolId },
+      { _id: req.params.id, ...schoolAndBranchQuery(req) },
       req.body,
       { new: true, runValidators: true }
     );
@@ -238,7 +241,7 @@ exports.updateClass = async (req, res) => {
 // @access  Private
 exports.deleteClass = async (req, res) => {
   try {
-    const cls = await Class.findOneAndDelete({ _id: req.params.id, schoolId: req.admin.schoolId });
+    const cls = await Class.findOneAndDelete({ _id: req.params.id, ...schoolAndBranchQuery(req) });
     if (!cls) return res.status(404).json({ success: false, message: 'Class not found' });
     res.status(200).json({ message: 'Class deleted successfully' });
   } catch (error) {
@@ -253,7 +256,7 @@ exports.archiveClass = async (req, res) => {
   try {
     const { isArchived } = req.body;
     const cls = await Class.findOneAndUpdate(
-      { _id: req.params.id, schoolId: req.admin.schoolId },
+      { _id: req.params.id, ...schoolAndBranchQuery(req) },
       { isArchived, status: isArchived ? 'archived' : 'active' },
       { new: true }
     );
@@ -270,7 +273,7 @@ exports.archiveClass = async (req, res) => {
 exports.getClassStatistics = async (req, res) => {
   try {
     const { academicYear } = req.query;
-    const query = { schoolId: req.admin.schoolId };
+    const query = schoolAndBranchQuery(req);
     if (academicYear) query.academicYearId = academicYear;
 
     const totalClasses = await Class.countDocuments(query);
@@ -317,7 +320,7 @@ exports.assignClassTeacher = async (req, res) => {
   try {
     const { teacherId } = req.body;
     const cls = await Class.findOneAndUpdate(
-      { _id: req.params.id, schoolId: req.admin.schoolId },
+      { _id: req.params.id, ...schoolAndBranchQuery(req) },
       { teacherId },
       { new: true }
     ).populate('teacherId', 'firstName lastName');
@@ -349,7 +352,7 @@ exports.getClassOverview = async (req, res) => {
     if(!cls) return res.status(404).json({message: 'Class not found'});
     
     const studentCount = await Student.countDocuments({classId: cls._id});
-    const subjectsCount = await Subject.countDocuments({schoolId: req.admin.schoolId}); // Simplified
+    const subjectsCount = await Subject.countDocuments(schoolAndBranchQuery(req)); // Simplified
 
     const occupied = studentCount;
     const totalCap = cls.maxStudents || 50;
@@ -528,7 +531,7 @@ exports.getAvailableTeachers = async (req, res) => {
   try {
      const Teacher = require('../models/Teacher');
      const { subjectId } = req.query;
-     const query = { schoolId: req.admin.schoolId, status: 'active' };
+     const query = { ...schoolAndBranchQuery(req), status: 'active' };
      // Add subject filtering logic if Teacher model supports 'specialization' or similar
      const teachers = await Teacher.find(query).select('firstName lastName email avatar subjects'); // Assuming subjects in teacher model
      
@@ -663,9 +666,12 @@ exports.getClassSections = async (req, res) => {
 // @desc    Create Section
 exports.createSection = async (req, res) => {
   try {
+    const cls = await Class.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) }).select('branchId');
+    if (!cls) return res.status(404).json({ message: 'Class not found' });
     const { name, code, capacity, status } = req.body;
     const section = await Section.create({
       schoolId: req.admin.schoolId,
+      branchId: cls.branchId,
       classId: req.params.id,
       name,
       code,

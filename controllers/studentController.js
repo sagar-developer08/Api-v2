@@ -14,6 +14,12 @@ const StudentTransfer = require('../models/StudentTransfer');
 const mongoose = require('mongoose');
 const { validationResult } = require('express-validator');
 
+// Base query for school + branch (branch-level admin sees only their branch)
+const schoolAndBranchQuery = (req) => ({
+  schoolId: req.admin.schoolId,
+  ...(req.branchFilter || {})
+});
+
 // Helper function to handle validation errors
 const handleValidationErrors = (req, res) => {
     const errors = validationResult(req);
@@ -27,10 +33,12 @@ const handleValidationErrors = (req, res) => {
     return null;
 };
 
-// Generate student ID
-const generateStudentId = async (schoolId) => {
+// Generate student ID (per branch)
+const generateStudentId = async (schoolId, branchId) => {
     const year = new Date().getFullYear();
-    const count = await Student.countDocuments({ schoolId }) + 1;
+    const filter = { schoolId };
+    if (branchId) filter.branchId = branchId;
+    const count = await Student.countDocuments(filter) + 1;
     return `STU-${year}-${String(count).padStart(3, '0')}`;
 };
 
@@ -43,7 +51,7 @@ const generateStudentId = async (schoolId) => {
 // @access  Private
 exports.getAllStudents = async (req, res) => {
     try {
-        const schoolId = req.admin.schoolId;
+        const query = schoolAndBranchQuery(req);
         const {
             page = 1,
             limit = 10,
@@ -59,9 +67,6 @@ exports.getAllStudents = async (req, res) => {
         const pageNum = parseInt(page);
         const limitNum = Math.min(parseInt(limit), 100);
         const skip = (pageNum - 1) * limitNum;
-
-        // Build query
-        const query = { schoolId };
 
         if (classId) query.classId = classId;
         if (sectionId) query.sectionId = sectionId;
@@ -137,7 +142,7 @@ exports.getStudentById = async (req, res) => {
     try {
         const student = await Student.findOne({
             _id: req.params.id,
-            schoolId: req.admin.schoolId
+            ...schoolAndBranchQuery(req)
         })
             .populate('classId', 'name')
             .populate('sectionId', 'name')
@@ -189,11 +194,20 @@ exports.createStudent = async (req, res) => {
 
     try {
         const schoolId = req.admin.schoolId;
-        const studentId = await generateStudentId(schoolId);
+        const branchId = req.body.branchId;
+        if (!branchId) {
+            return res.status(400).json({ error: 'Validation Error', message: 'branchId is required' });
+        }
+        // Branch-level admin can only create in their branch
+        if (req.branchFilter && req.branchFilter.branchId && req.branchFilter.branchId.toString() !== branchId.toString()) {
+            return res.status(403).json({ error: 'Forbidden', message: 'You can only create students in your branch' });
+        }
+        const studentId = await generateStudentId(schoolId, branchId);
 
         const student = new Student({
             ...req.body,
             schoolId,
+            branchId,
             studentId
         });
 
@@ -224,7 +238,7 @@ exports.updateStudent = async (req, res) => {
 
     try {
         const student = await Student.findOneAndUpdate(
-            { _id: req.params.id, schoolId: req.admin.schoolId },
+            { _id: req.params.id, ...schoolAndBranchQuery(req) },
             { $set: req.body },
             { new: true, runValidators: true }
         );
@@ -246,7 +260,7 @@ exports.deleteStudent = async (req, res) => {
     try {
         const student = await Student.findOneAndDelete({
             _id: req.params.id,
-            schoolId: req.admin.schoolId
+            ...schoolAndBranchQuery(req)
         });
 
         if (!student) {
@@ -490,7 +504,7 @@ exports.addGuardian = async (req, res) => {
     const validationError = handleValidationErrors(req, res);
     if (validationError) return;
     try {
-        const student = await Student.findOne({ _id: req.params.id, schoolId: req.admin.schoolId });
+        const student = await Student.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) });
         if (!student) return res.status(404).json({ error: 'Not Found', message: 'Student not found' });
         const guardian = new Guardian({ ...req.body, studentId: req.params.id, schoolId: req.admin.schoolId });
         await guardian.save();
@@ -608,7 +622,7 @@ exports.recordFeePayment = async (req, res) => {
 
 exports.assignFeeToStudent = async (req, res) => {
     try {
-        const student = await Student.findOne({ _id: req.params.id, schoolId: req.admin.schoolId });
+        const student = await Student.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) });
         if (!student) return res.status(404).json({ error: 'Not Found', message: 'Student not found' });
 
         const fee = new StudentFee({
@@ -638,7 +652,7 @@ exports.getStudentDocuments = async (req, res) => {
 
 exports.uploadStudentDocument = async (req, res) => {
     try {
-        const student = await Student.findOne({ _id: req.params.id, schoolId: req.admin.schoolId });
+        const student = await Student.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) });
         if (!student) return res.status(404).json({ error: 'Not Found', message: 'Student not found' });
         const fileUrl = req.file ? `/uploads/${req.file.filename}` : req.body.fileUrl;
         const doc = new StudentDocument({ ...req.body, fileUrl, studentId: req.params.id, schoolId: req.admin.schoolId, uploadedBy: req.admin._id, fileSize: req.file?.size || 0, mimeType: req.file?.mimetype });
@@ -677,7 +691,7 @@ exports.getStudentTransport = async (req, res) => {
 
 exports.assignTransport = async (req, res) => {
     try {
-        const student = await Student.findOne({ _id: req.params.id, schoolId: req.admin.schoolId });
+        const student = await Student.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) });
         if (!student) return res.status(404).json({ error: 'Not Found', message: 'Student not found' });
         const existing = await StudentTransport.findOne({ studentId: req.params.id });
         if (existing) return res.status(409).json({ error: 'Conflict', message: 'Transport already assigned' });
@@ -709,7 +723,7 @@ exports.removeTransport = async (req, res) => {
 
 exports.getStudentAcademicDetails = async (req, res) => {
     try {
-        const student = await Student.findOne({ _id: req.params.id, schoolId: req.admin.schoolId }).populate('classId').populate('sectionId').lean();
+        const student = await Student.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) }).populate('classId').populate('sectionId').lean();
         if (!student) return res.status(404).json({ error: 'Not Found', message: 'Student not found' });
         res.json({ currentAcademic: { academicYear: student.academicYear, classId: student.classId?._id, className: student.classId?.name, sectionId: student.sectionId?._id, sectionName: student.sectionId?.name, rollNumber: student.rollNumber, admissionDate: student.admissionDate, admissionNumber: student.admissionNumber } });
     } catch (error) { res.status(500).json({ error: 'Server Error', message: error.message }); }
@@ -726,7 +740,7 @@ exports.addAcademicRecord = async (req, res) => {
     const validationError = handleValidationErrors(req, res);
     if (validationError) return;
     try {
-        const student = await Student.findOne({ _id: req.params.id, schoolId: req.admin.schoolId });
+        const student = await Student.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) });
         if (!student) return res.status(404).json({ error: 'Not Found', message: 'Student not found' });
         const record = new StudentAcademicRecord({ ...req.body, studentId: req.params.id, schoolId: req.admin.schoolId });
         await record.save();
@@ -815,7 +829,7 @@ exports.transferStudent = async (req, res) => {
     const validationError = handleValidationErrors(req, res);
     if (validationError) return;
     try {
-        const student = await Student.findOne({ _id: req.params.id, schoolId: req.admin.schoolId }).populate('classId', 'name').populate('sectionId', 'name');
+        const student = await Student.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) }).populate('classId', 'name').populate('sectionId', 'name');
         if (!student) return res.status(404).json({ error: 'Not Found', message: 'Student not found' });
         const transfer = new StudentTransfer({ studentId: req.params.id, schoolId: req.admin.schoolId, transferType: 'transfer', fromClassId: student.classId?._id, fromClassName: student.classId?.name, fromSectionId: student.sectionId?._id, fromSectionName: student.sectionId?.name, fromRollNumber: student.rollNumber, toClassId: req.body.targetClassId, toSectionId: req.body.targetSectionId, toAcademicYear: req.body.targetAcademicYear, transferDate: req.body.transferDate, reason: req.body.reason, remarks: req.body.remarks, transferredBy: req.admin._id });
         await transfer.save();
@@ -831,7 +845,7 @@ exports.promoteStudent = async (req, res) => {
     const validationError = handleValidationErrors(req, res);
     if (validationError) return;
     try {
-        const student = await Student.findOne({ _id: req.params.id, schoolId: req.admin.schoolId }).populate('classId', 'name').populate('sectionId', 'name');
+        const student = await Student.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) }).populate('classId', 'name').populate('sectionId', 'name');
         if (!student) return res.status(404).json({ error: 'Not Found', message: 'Student not found' });
         const transfer = new StudentTransfer({ studentId: req.params.id, schoolId: req.admin.schoolId, transferType: 'promotion', fromClassId: student.classId?._id, fromClassName: student.classId?.name, fromSectionId: student.sectionId?._id, fromSectionName: student.sectionId?.name, toClassId: req.body.targetClassId, toSectionId: req.body.targetSectionId, toAcademicYear: req.body.targetAcademicYear, transferDate: req.body.promotionDate || new Date(), remarks: req.body.remarks, transferredBy: req.admin._id });
         await transfer.save();
@@ -880,7 +894,7 @@ exports.bulkImportStudents = async (req, res) => {
 
 exports.exportStudents = async (req, res) => {
     try {
-        const students = await Student.find({ schoolId: req.admin.schoolId }).populate('classId', 'name').populate('sectionId', 'name').lean();
+        const students = await Student.find(schoolAndBranchQuery(req)).populate('classId', 'name').populate('sectionId', 'name').lean();
         // For now, return JSON - would generate CSV/Excel/PDF based on format param
         res.json({ data: students, format: req.query.format || 'json' });
     } catch (error) { res.status(500).json({ error: 'Server Error', message: error.message }); }

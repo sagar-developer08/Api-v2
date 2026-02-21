@@ -8,6 +8,11 @@ const academicYearSchema = new mongoose.Schema({
     ref: 'School',
     required: true
   },
+  branchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch',
+    required: true
+  },
   label: {
     type: String,
     required: true,
@@ -26,7 +31,9 @@ const academicYearSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 academicYearSchema.index({ schoolId: 1 });
-academicYearSchema.index({ schoolId: 1, status: 1 });
+academicYearSchema.index({ branchId: 1 });
+academicYearSchema.index({ schoolId: 1, branchId: 1 });
+academicYearSchema.index({ schoolId: 1, branchId: 1, status: 1 });
 
 module.exports = mongoose.model('AcademicYear', academicYearSchema);
 module.exports.ACADEMIC_YEAR_STATUS = ACADEMIC_YEAR_STATUS;

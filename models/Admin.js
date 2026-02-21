@@ -32,6 +32,11 @@ const adminSchema = new mongoose.Schema({
     ref: 'School',
     required: true
   },
+  branchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch',
+    default: null // null = school-level admin, set = branch-level admin
+  },
   isEmailVerified: {
     type: Boolean,
     default: false
@@ -69,5 +74,7 @@ adminSchema.methods.comparePassword = async function(candidatePassword) {
 // Indexes
 // Note: email and mobileNumber already have unique indexes from unique: true
 adminSchema.index({ schoolId: 1 });
+adminSchema.index({ branchId: 1 });
+adminSchema.index({ schoolId: 1, branchId: 1 });
 
 module.exports = mongoose.model('Admin', adminSchema);

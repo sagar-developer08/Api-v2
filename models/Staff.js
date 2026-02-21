@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 
 const staffSchema = new mongoose.Schema({
   schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
+  branchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', required: true },
   employeeId: { type: String, trim: true },
   firstName: { type: String, required: true, trim: true },
   lastName: { type: String, required: true, trim: true },
@@ -19,7 +20,10 @@ const staffSchema = new mongoose.Schema({
   password: { type: String, minlength: 6, select: false }
 }, { timestamps: true });
 
-staffSchema.index({ schoolId: 1, email: 1 });
-staffSchema.index({ schoolId: 1, employeeId: 1 }, { sparse: true });
+staffSchema.index({ schoolId: 1 });
+staffSchema.index({ branchId: 1 });
+staffSchema.index({ schoolId: 1, branchId: 1 });
+staffSchema.index({ schoolId: 1, branchId: 1, email: 1 });
+staffSchema.index({ schoolId: 1, branchId: 1, employeeId: 1 }, { sparse: true });
 
 module.exports = mongoose.model('Staff', staffSchema);

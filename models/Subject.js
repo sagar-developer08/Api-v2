@@ -6,6 +6,11 @@ const subjectSchema = new mongoose.Schema({
     ref: 'School',
     required: true
   },
+  branchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch',
+    required: true
+  },
   name: {
     type: String,
     required: true,
@@ -23,5 +28,7 @@ const subjectSchema = new mongoose.Schema({
 }, { timestamps: true });
 
 subjectSchema.index({ schoolId: 1 });
+subjectSchema.index({ branchId: 1 });
+subjectSchema.index({ schoolId: 1, branchId: 1 });
 
 module.exports = mongoose.model('Subject', subjectSchema);

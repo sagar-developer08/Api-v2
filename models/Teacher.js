@@ -7,6 +7,11 @@ const teacherSchema = new mongoose.Schema({
     ref: 'School',
     required: true
   },
+  branchId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Branch',
+    required: true
+  },
   employeeId: {
     type: String,
     trim: true
@@ -128,6 +133,8 @@ teacherSchema.methods.comparePassword = async function (candidatePassword) {
 };
 
 teacherSchema.index({ schoolId: 1 });
-teacherSchema.index({ employeeId: 1, schoolId: 1 });
+teacherSchema.index({ branchId: 1 });
+teacherSchema.index({ schoolId: 1, branchId: 1 });
+teacherSchema.index({ employeeId: 1, schoolId: 1, branchId: 1 });
 
 module.exports = mongoose.model('Teacher', teacherSchema);

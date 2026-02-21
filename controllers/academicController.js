@@ -7,6 +7,11 @@ const Guardian = require('../models/Guardian');
 const AcademicYear = require('../models/AcademicYear');
 const mongoose = require('mongoose');
 
+const schoolAndBranchQuery = (req) => ({
+  schoolId: req.admin.schoolId,
+  ...(req.branchFilter || {})
+});
+
 // --- Students ---
 
 // @desc    Get all students (with pagination, filtering, search)
@@ -26,7 +31,7 @@ exports.getAllStudents = async (req, res) => {
       sortOrder = 'asc'
     } = req.query;
 
-    const query = { schoolId: req.admin.schoolId };
+    const query = schoolAndBranchQuery(req);
 
     // Filtering
     if (classId) query.classId = classId;
@@ -114,7 +119,7 @@ exports.getAllStudents = async (req, res) => {
 // @access  Private
 exports.getStudentById = async (req, res) => {
   try {
-    const student = await Student.findOne({ _id: req.params.id, schoolId: req.admin.schoolId })
+    const student = await Student.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) })
       .populate('classId', 'name')
       .populate('sectionId', 'name')
       .populate('academicYearId', 'label');
@@ -189,7 +194,7 @@ exports.createStudent = async (req, res) => {
 // @access  Private
 exports.updateStudent = async (req, res) => {
   try {
-    let student = await Student.findOne({ _id: req.params.id, schoolId: req.admin.schoolId });
+    let student = await Student.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) });
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
@@ -214,7 +219,7 @@ exports.updateStudent = async (req, res) => {
 // @access  Private
 exports.deleteStudent = async (req, res) => {
   try {
-    const student = await Student.findOne({ _id: req.params.id, schoolId: req.admin.schoolId });
+    const student = await Student.findOne({ _id: req.params.id, ...schoolAndBranchQuery(req) });
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
@@ -232,7 +237,7 @@ exports.deleteStudent = async (req, res) => {
 exports.getStudentStatistics = async (req, res) => {
   try {
     const { academicYear, classId } = req.query;
-    const matchStage = { schoolId: req.admin.schoolId };
+    const matchStage = schoolAndBranchQuery(req);
 
     if (academicYear) matchStage.academicYearId = new mongoose.Types.ObjectId(academicYear);
     if (classId) matchStage.classId = new mongoose.Types.ObjectId(classId);
@@ -355,7 +360,7 @@ exports.addGuardian = async (req, res) => {
   try {
     const { id } = req.params;
     // Verify student exists and belongs to school
-    const student = await Student.findOne({ _id: id, schoolId: req.admin.schoolId });
+    const student = await Student.findOne({ _id: id, ...schoolAndBranchQuery(req) });
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student not found' });
     }
@@ -386,7 +391,7 @@ exports.addGuardian = async (req, res) => {
 // @access  Private
 exports.getAllSections = async (req, res) => {
   try {
-    const sections = await Section.find({ schoolId: req.admin.schoolId });
+    const sections = await Section.find(schoolAndBranchQuery(req));
 
     res.status(200).json({
       success: true,
@@ -407,6 +412,12 @@ exports.getAllSections = async (req, res) => {
 // @access  Private
 exports.createSection = async (req, res) => {
   try {
+    if (!req.body.branchId) {
+      return res.status(400).json({ success: false, message: 'branchId is required' });
+    }
+    if (req.branchFilter && req.branchFilter.branchId && req.branchFilter.branchId.toString() !== req.body.branchId.toString()) {
+      return res.status(403).json({ success: false, message: 'You can only create sections in your branch' });
+    }
     req.body.schoolId = req.admin.schoolId;
     const section = await Section.create(req.body);
 
@@ -429,7 +440,7 @@ exports.createSection = async (req, res) => {
 // @access  Private
 exports.getAllSubjects = async (req, res) => {
   try {
-    const subjects = await Subject.find({ schoolId: req.admin.schoolId });
+    const subjects = await Subject.find(schoolAndBranchQuery(req));
 
     res.status(200).json({
       success: true,
@@ -450,6 +461,12 @@ exports.getAllSubjects = async (req, res) => {
 // @access  Private
 exports.createSubject = async (req, res) => {
   try {
+    if (!req.body.branchId) {
+      return res.status(400).json({ success: false, message: 'branchId is required' });
+    }
+    if (req.branchFilter && req.branchFilter.branchId && req.branchFilter.branchId.toString() !== req.body.branchId.toString()) {
+      return res.status(403).json({ success: false, message: 'You can only create subjects in your branch' });
+    }
     req.body.schoolId = req.admin.schoolId;
     const subject = await Subject.create(req.body);
 
