@@ -8,7 +8,6 @@ This document provides comprehensive API requirements organized by application. 
 **Authentication**: All endpoints (except auth endpoints) require Bearer token authentication:
 ```
 Authorization: Bearer <token>
-```
 
 **Common Response Format**:
 ```json
