@@ -19,6 +19,7 @@ const ExamResult = require('../models/ExamResult');
 const Notice = require('../models/Notice');
 const Content = require('../models/Content');
 const mongoose = require('mongoose');
+const { buildPortalNoticeFilter } = require('../utils/noticeBoardHelpers');
 
 // ============================================
 // SECTION 1: DASHBOARD
@@ -36,7 +37,7 @@ exports.getDashboardStats = async (req, res) => {
             StudentAttendance.find(filter).select('status'),
             Exam.countDocuments({ schoolId, classId: student.classId, status: 'scheduled', examDate: { $gte: new Date() } }),
             StudentFee.find({ ...filter, status: { $in: ['pending', 'partial', 'overdue'] } }).select('pendingAmount'),
-            Notice.countDocuments({ schoolId, status: 'published', target: { $in: ['all', 'students'] } })
+            Notice.countDocuments(buildPortalNoticeFilter(schoolId, ['all', 'students']))
         ]);
 
         const totalGrades = grades.length;
@@ -1106,13 +1107,13 @@ exports.getNotices = async (req, res) => {
         const schoolId = student.schoolId._id || student.schoolId;
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
-        const query = { schoolId, status: 'published', target: { $in: ['all', 'students'] } };
+        const query = { ...buildPortalNoticeFilter(schoolId, ['all', 'students']) };
         if (req.query.type) query.type = req.query.type;
         if (req.query.search) query.title = new RegExp(req.query.search, 'i');
 
         const [notices, total] = await Promise.all([
-            Notice.find(query).populate('createdBy', 'name')
-                .skip((page - 1) * limit).limit(limit).sort({ publishedAt: -1 }),
+            Notice.find(query).populate('createdBy', 'fullName')
+                .skip((page - 1) * limit).limit(limit).sort({ postAt: -1, publishedAt: -1 }),
             Notice.countDocuments(query)
         ]);
 
@@ -1133,7 +1134,11 @@ exports.getNotices = async (req, res) => {
 
 exports.getNoticeDetails = async (req, res) => {
     try {
-        const n = await Notice.findById(req.params.noticeId).populate('createdBy', 'name');
+        const schoolId = req.student.schoolId._id || req.student.schoolId;
+        const n = await Notice.findOne({
+            _id: req.params.noticeId,
+            ...buildPortalNoticeFilter(schoolId, ['all', 'students'])
+        }).populate('createdBy', 'fullName');
         if (!n) return res.status(404).json({ success: false, message: 'Notice not found' });
         res.json({
             success: true,

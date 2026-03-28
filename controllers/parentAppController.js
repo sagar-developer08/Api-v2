@@ -13,6 +13,7 @@ const Timetable = require('../models/Timetable');
 const StudentFee = require('../models/StudentFee');
 const FeePayment = require('../models/FeePayment');
 const Notice = require('../models/Notice');
+const { buildPortalNoticeFilter } = require('../utils/noticeBoardHelpers');
 const StudentCommunication = require('../models/StudentCommunication');
 const School = require('../models/School');
 const mongoose = require('mongoose');
@@ -259,12 +260,8 @@ exports.payChildFee = async (req, res) => {
 exports.getNotices = async (req, res) => {
   try {
     const schoolId = req.parent.schoolId._id || req.parent.schoolId;
-    const notices = await Notice.find({
-      schoolId,
-      status: 'published',
-      target: { $in: ['all', 'parents'] }
-    })
-      .sort({ createdAt: -1 })
+    const notices = await Notice.find(buildPortalNoticeFilter(schoolId, ['all', 'parents']))
+      .sort({ postAt: -1, publishedAt: -1, createdAt: -1 })
       .limit(50)
       .lean();
     res.status(200).json({ success: true, data: notices });

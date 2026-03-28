@@ -3,6 +3,12 @@ const router = express.Router();
 const { protect, requireApprovedSchool } = require('../middleware/auth');
 const ctrl = require('../controllers/adminAppController');
 const ext = require('../controllers/adminExtendedController');
+const noticeBoardCtrl = require('../controllers/noticeBoardController');
+const {
+  listQuery,
+  noticeIdParam,
+  handleNoticeValidationErrors
+} = require('../validators/noticeBoardValidators');
 
 // All routes require admin authentication
 router.use(protect);
@@ -256,12 +262,55 @@ router.delete('/grades/:gradeId', ctrl.deleteGrade);
 // ============================================
 // 12. COMMUNICATION (NOTICES)
 // ============================================
-router.get('/communication/notices', ctrl.getNotices);
-router.post('/communication/notices', ctrl.createNotice);
-router.get('/communication/notices/:noticeId', ctrl.getNoticeDetails);
-router.put('/communication/notices/:noticeId', ctrl.updateNotice);
-router.delete('/communication/notices/:noticeId', ctrl.deleteNotice);
-router.post('/communication/notices/:noticeId/publish', ctrl.publishNotice);
+router.get(
+  '/communication/notices',
+  listQuery,
+  handleNoticeValidationErrors,
+  ctrl.getNotices
+);
+router.post(
+  '/communication/notices',
+  noticeBoardCtrl.attachUpload,
+  ctrl.createNotice
+);
+router.get(
+  '/communication/notices/:noticeId',
+  noticeIdParam,
+  handleNoticeValidationErrors,
+  ctrl.getNoticeDetails
+);
+router.patch(
+  '/communication/notices/:noticeId',
+  noticeIdParam,
+  handleNoticeValidationErrors,
+  noticeBoardCtrl.attachUpload,
+  ctrl.updateNotice
+);
+router.put(
+  '/communication/notices/:noticeId',
+  noticeIdParam,
+  handleNoticeValidationErrors,
+  noticeBoardCtrl.attachUpload,
+  ctrl.updateNotice
+);
+router.delete(
+  '/communication/notices/:noticeId',
+  noticeIdParam,
+  handleNoticeValidationErrors,
+  ctrl.deleteNotice
+);
+router.get(
+  '/communication/notices/:noticeId/attachment',
+  noticeIdParam,
+  handleNoticeValidationErrors,
+  noticeBoardCtrl.downloadAttachment
+);
+router.post(
+  '/communication/notices/:noticeId/publish',
+  noticeIdParam,
+  handleNoticeValidationErrors,
+  ctrl.publishNotice
+);
 router.put('/communication/notices/:noticeId/read', ext.markNoticeAsRead);
 router.get('/communication/templates', ext.getTemplates);
 router.post('/communication/templates', ext.createTemplate);

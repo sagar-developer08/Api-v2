@@ -12,6 +12,7 @@ const Timetable = require('../models/Timetable');
 const Exam = require('../models/Exam');
 const ExamResult = require('../models/ExamResult');
 const Notice = require('../models/Notice');
+const { buildPortalNoticeFilter } = require('../utils/noticeBoardHelpers');
 const Content = require('../models/Content');
 const TeacherLeave = require('../models/TeacherLeave');
 const StudentCommunication = require('../models/StudentCommunication');
@@ -895,12 +896,14 @@ exports.getNotices = async (req, res) => {
     try {
         const teacher = req.teacher;
         const schoolId = teacher.schoolId._id || teacher.schoolId;
-        const { page = 1, limit = 10, type, status } = req.query;
-        const query = { schoolId, target: { $in: ['teachers', 'all'] } };
+        const { page = 1, limit = 10, type } = req.query;
+        const query = { ...buildPortalNoticeFilter(schoolId, ['teachers', 'all']) };
         if (type) query.type = type;
-        if (status) query.status = status;
 
-        const notices = await Notice.find(query).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(Number(limit));
+        const notices = await Notice.find(query)
+            .sort({ postAt: -1, publishedAt: -1, createdAt: -1 })
+            .skip((page - 1) * limit)
+            .limit(Number(limit));
         const total = await Notice.countDocuments(query);
 
         res.status(200).json({ success: true, data: notices, total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / limit) });
@@ -911,7 +914,11 @@ exports.getNotices = async (req, res) => {
 
 exports.getNoticeDetails = async (req, res) => {
     try {
-        const notice = await Notice.findById(req.params.noticeId);
+        const schoolId = req.teacher.schoolId._id || req.teacher.schoolId;
+        const notice = await Notice.findOne({
+            _id: req.params.noticeId,
+            ...buildPortalNoticeFilter(schoolId, ['teachers', 'all'])
+        });
         if (!notice) return res.status(404).json({ success: false, message: 'Notice not found' });
         // Mark as read
         if (!notice.readBy.includes(req.teacher._id)) {

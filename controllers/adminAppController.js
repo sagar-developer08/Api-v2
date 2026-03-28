@@ -20,6 +20,7 @@ const Content = require('../models/Content');
 const School = require('../models/School');
 const SchoolSettings = require('../models/SchoolSettings');
 const mongoose = require('mongoose');
+const noticeBoardController = require('./noticeBoardController');
 
 // ============================================
 // SECTION 1: DASHBOARD
@@ -65,7 +66,11 @@ exports.getDashboardStats = async (req, res) => {
                 status: { $in: ['scheduled', 'upcoming'] },
                 examDate: { $gte: new Date() }
             }),
-            Notice.countDocuments({ schoolId, status: 'published', createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } })
+            Notice.countDocuments({
+                schoolId,
+                status: { $in: ['published', 'active'] },
+                createdAt: { $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
+            })
         ]);
 
         const totalPendingFees = await StudentFee.aggregate([
@@ -1965,139 +1970,14 @@ exports.deleteGrade = async (req, res) => {
 };
 
 // ============================================
-// SECTION 12: COMMUNICATION (NOTICES)
+// SECTION 12: COMMUNICATION (NOTICES) — see noticeBoardController
 // ============================================
-exports.getNotices = async (req, res) => {
-    try {
-        const admin = req.admin;
-        const schoolId = admin.schoolId._id || admin.schoolId;
-        const { page = 1, limit = 10, type, status } = req.query;
-
-        const filter = { schoolId };
-        if (type) filter.type = type;
-        if (status) filter.status = status;
-
-        const [notices, total] = await Promise.all([
-            Notice.find(filter)
-                .populate('createdBy', 'firstName lastName')
-                .skip((page - 1) * limit)
-                .limit(Number(limit))
-                .sort({ createdAt: -1 }),
-            Notice.countDocuments(filter)
-        ]);
-
-        res.json({
-            success: true,
-            data: notices,
-            total,
-            page: Number(page),
-            limit: Number(limit),
-            totalPages: Math.ceil(total / limit)
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Error fetching notices', error: error.message });
-    }
-};
-
-exports.getNoticeDetails = async (req, res) => {
-    try {
-        const admin = req.admin;
-        const schoolId = admin.schoolId._id || admin.schoolId;
-
-        const notice = await Notice.findOne({ _id: req.params.noticeId, schoolId })
-            .populate('createdBy', 'firstName lastName email');
-
-        if (!notice) return res.status(404).json({ success: false, message: 'Notice not found' });
-
-        res.json({ success: true, data: notice });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Error fetching notice details', error: error.message });
-    }
-};
-
-exports.createNotice = async (req, res) => {
-    try {
-        const admin = req.admin;
-        const schoolId = admin.schoolId._id || admin.schoolId;
-
-        const noticeData = {
-            ...req.body,
-            schoolId,
-            createdBy: admin._id
-        };
-
-        const notice = await Notice.create(noticeData);
-
-        res.status(201).json({
-            success: true,
-            data: notice,
-            message: 'Notice created successfully'
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Error creating notice', error: error.message });
-    }
-};
-
-exports.updateNotice = async (req, res) => {
-    try {
-        const admin = req.admin;
-        const schoolId = admin.schoolId._id || admin.schoolId;
-
-        const notice = await Notice.findOneAndUpdate(
-            { _id: req.params.noticeId, schoolId },
-            { ...req.body, updatedBy: admin._id },
-            { new: true, runValidators: true }
-        );
-
-        if (!notice) return res.status(404).json({ success: false, message: 'Notice not found' });
-
-        res.json({
-            success: true,
-            data: notice,
-            message: 'Notice updated successfully'
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Error updating notice', error: error.message });
-    }
-};
-
-exports.deleteNotice = async (req, res) => {
-    try {
-        const admin = req.admin;
-        const schoolId = admin.schoolId._id || admin.schoolId;
-
-        const notice = await Notice.findOneAndDelete({ _id: req.params.noticeId, schoolId });
-
-        if (!notice) return res.status(404).json({ success: false, message: 'Notice not found' });
-
-        res.json({ success: true, message: 'Notice deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Error deleting notice', error: error.message });
-    }
-};
-
-exports.publishNotice = async (req, res) => {
-    try {
-        const admin = req.admin;
-        const schoolId = admin.schoolId._id || admin.schoolId;
-
-        const notice = await Notice.findOneAndUpdate(
-            { _id: req.params.noticeId, schoolId },
-            { status: 'published', publishedBy: admin._id, publishedAt: new Date() },
-            { new: true }
-        );
-
-        if (!notice) return res.status(404).json({ success: false, message: 'Notice not found' });
-
-        res.json({
-            success: true,
-            data: notice,
-            message: 'Notice published successfully'
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: 'Error publishing notice', error: error.message });
-    }
-};
+exports.getNotices = noticeBoardController.listNotices;
+exports.getNoticeDetails = noticeBoardController.getNotice;
+exports.createNotice = noticeBoardController.createNotice;
+exports.updateNotice = noticeBoardController.updateNotice;
+exports.deleteNotice = noticeBoardController.deleteNotice;
+exports.publishNotice = noticeBoardController.publishNotice;
 
 exports.getSettings = async (req, res) => {
     try {
