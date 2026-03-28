@@ -228,7 +228,6 @@ module.exports = {
   effectiveStatus,
   postAtForQuery,
   mapNoticeToResponse,
-  stripLegacyFromResponse,
   buildAdminListFilter,
   countsByEffectiveStatus,
   buildPortalNoticeFilter

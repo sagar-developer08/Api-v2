@@ -1,43 +1,63 @@
 #!/usr/bin/env bash
-# Notice Board API — curl examples
-# Base paths:
-#   /api/v1/schools/{schoolId}/notices  (tenant in URL; must match admin's school)
-#   /api/v1/admin/communication/notices  (tenant from JWT)
+# Notice Board API — full curl reference (safe: this script only prints examples).
+# Usage:
+#   ./scripts/curl-notice-board-api.sh              # print all examples to stdout
+#   BASE=http://localhost:3000 TOKEN=... ./scripts/curl-notice-board-api.sh  # print with env substituted
 #
-# Usage: set variables below, then copy/paste individual curl blocks, or: bash -x scripts/curl-notice-board-api.sh (if you uncomment calls).
+# Or open this file and copy the blocks from the heredoc below.
 
-set -euo pipefail
+substitute() {
+  local BASE="${BASE:-http://localhost:3000}"
+  local TOKEN="${TOKEN:-YOUR_ADMIN_JWT}"
+  local SCHOOL_ID="${SCHOOL_ID:-YOUR_SCHOOL_OBJECT_ID}"
+  local NOTICE_ID="${NOTICE_ID:-YOUR_NOTICE_OBJECT_ID}"
+  local ATTACHMENT_FILE="${ATTACHMENT_FILE:-/path/to/file.pdf}"
+  sed -e "s|{{BASE}}|${BASE}|g" \
+      -e "s|{{TOKEN}}|${TOKEN}|g" \
+      -e "s|{{SCHOOL_ID}}|${SCHOOL_ID}|g" \
+      -e "s|{{NOTICE_ID}}|${NOTICE_ID}|g" \
+      -e "s|{{ATTACHMENT_FILE}}|${ATTACHMENT_FILE}|g"
+}
 
-# --- set these ---
-BASE="${BASE:-http://localhost:3000}"
-TOKEN="${TOKEN:-REPLACE_WITH_ADMIN_JWT}"
-SCHOOL_ID="${SCHOOL_ID:-REPLACE_WITH_SCHOOL_OBJECT_ID}"
-NOTICE_ID="${NOTICE_ID:-REPLACE_WITH_NOTICE_OBJECT_ID}"
-# PDF path for multipart examples (optional)
-ATTACHMENT_FILE="${ATTACHMENT_FILE:-/path/to/file.pdf}"
+substitute <<'CURL_REFERENCE'
+# =============================================================================
+# Notice Board API — curl examples
+# Running this script substitutes template vars in curl lines from env: BASE, TOKEN, SCHOOL_ID, NOTICE_ID, ATTACHMENT_FILE (defaults shown in sed inside script).
+# =============================================================================
+
+# --- env (optional) ---
+# export BASE="http://localhost:3000"
+# export TOKEN="eyJhbGciOiJIUzI1NiIs..."
+# export SCHOOL_ID="507f1f77bcf86cd799439011"
+# export NOTICE_ID="507f191e810c19729de860ea"
+# export ATTACHMENT_FILE="/path/to/file.pdf"
+
+# Reference:
+# Categories: Academic, Events, Maintenance, Arts, Finance, Notice, Training
+# Write statuses: draft, active, scheduled
+# List filter status: all | draft | active | scheduled | expired
+# Sort: postAt_desc | postAt_asc
 
 # =============================================================================
-# SCHOOL-SCOPED: /api/v1/schools/{schoolId}/notices
+# A) SCHOOL-SCOPED — /api/v1/schools/{schoolId}/notices
 # =============================================================================
 
-# List (filters, sort, pagination, optional status counts)
+# A1) List (pagination, filters, optional countsByEffectiveStatus)
 curl -sS -X GET \
-  "${BASE}/api/v1/schools/${SCHOOL_ID}/notices?category=all&status=all&q=&sort=postAt_desc&page=1&pageSize=10&counts=1" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/schools/{{SCHOOL_ID}}/notices?category=all&status=all&q=&sort=postAt_desc&page=1&pageSize=10&counts=1" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Accept: application/json"
-echo
 
-# Get one
+# A2) Get one
 curl -sS -X GET \
-  "${BASE}/api/v1/schools/${SCHOOL_ID}/notices/${NOTICE_ID}" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/schools/{{SCHOOL_ID}}/notices/{{NOTICE_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Accept: application/json"
-echo
 
-# Create (JSON, no file)
+# A3) Create (JSON)
 curl -sS -X POST \
-  "${BASE}/api/v1/schools/${SCHOOL_ID}/notices" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/schools/{{SCHOOL_ID}}/notices" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
@@ -52,12 +72,11 @@ curl -sS -X POST \
     "visualKey": "academic",
     "target": "all"
   }'
-echo
 
-# Create (draft — content may be empty)
+# A4) Create (draft)
 curl -sS -X POST \
-  "${BASE}/api/v1/schools/${SCHOOL_ID}/notices" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/schools/{{SCHOOL_ID}}/notices" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
@@ -70,12 +89,11 @@ curl -sS -X POST \
     "expiresAt": "2026-04-30T23:59:59.999Z",
     "target": "all"
   }'
-echo
 
-# Create (multipart + attachment)
+# A5) Create (multipart + attachment)
 curl -sS -X POST \
-  "${BASE}/api/v1/schools/${SCHOOL_ID}/notices" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/schools/{{SCHOOL_ID}}/notices" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Accept: application/json" \
   -F "title=Notice with PDF" \
   -F "category=Finance" \
@@ -85,82 +103,73 @@ curl -sS -X POST \
   -F "postAt=2026-03-28T06:00:00.000Z" \
   -F "expiresAt=2026-04-30T23:59:59.999Z" \
   -F "target=all" \
-  -F "attachment=@${ATTACHMENT_FILE};type=application/pdf"
-echo
+  -F "attachment=@{{ATTACHMENT_FILE}};type=application/pdf"
 
-# Update (JSON)
+# A6) Update (JSON)
 curl -sS -X PATCH \
-  "${BASE}/api/v1/schools/${SCHOOL_ID}/notices/${NOTICE_ID}" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/schools/{{SCHOOL_ID}}/notices/{{NOTICE_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
     "title": "Updated title",
     "content": "<p>Updated body</p>"
   }'
-echo
 
-# Update — replace attachment (multipart)
+# A7) Update (replace attachment)
 curl -sS -X PATCH \
-  "${BASE}/api/v1/schools/${SCHOOL_ID}/notices/${NOTICE_ID}" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/schools/{{SCHOOL_ID}}/notices/{{NOTICE_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Accept: application/json" \
   -F "title=Updated with new file" \
-  -F "attachment=@${ATTACHMENT_FILE};type=application/pdf"
-echo
+  -F "attachment=@{{ATTACHMENT_FILE}};type=application/pdf"
 
-# Update — remove attachment
+# A8) Update (remove attachment)
 curl -sS -X PATCH \
-  "${BASE}/api/v1/schools/${SCHOOL_ID}/notices/${NOTICE_ID}" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/schools/{{SCHOOL_ID}}/notices/{{NOTICE_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{"removeAttachment": true}'
-echo
 
-# Delete
+# A9) Delete
 curl -sS -X DELETE \
-  "${BASE}/api/v1/schools/${SCHOOL_ID}/notices/${NOTICE_ID}" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/schools/{{SCHOOL_ID}}/notices/{{NOTICE_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Accept: application/json"
-echo
 
-# Download attachment (-o writes file)
+# A10) Download attachment
 curl -sS -L -X GET \
-  "${BASE}/api/v1/schools/${SCHOOL_ID}/notices/${NOTICE_ID}/attachment" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/schools/{{SCHOOL_ID}}/notices/{{NOTICE_ID}}/attachment" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -o "downloaded-notice-attachment"
-echo "Saved attachment to ./downloaded-notice-attachment"
 
-# Publish (sets active + postAt/publishedAt to now)
+# A11) Publish (legacy — sets active + now)
 curl -sS -X POST \
-  "${BASE}/api/v1/schools/${SCHOOL_ID}/notices/${NOTICE_ID}/publish" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/schools/{{SCHOOL_ID}}/notices/{{NOTICE_ID}}/publish" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Accept: application/json"
-echo
 
 # =============================================================================
-# ADMIN PATH (tenant from session): /api/v1/admin/communication/notices
+# B) ADMIN PATH (tenant from JWT) — /api/v1/admin/communication/notices
 # =============================================================================
 
-# List
+# B1) List
 curl -sS -X GET \
-  "${BASE}/api/v1/admin/communication/notices?category=all&status=all&q=&sort=postAt_desc&page=1&pageSize=10&counts=1" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/admin/communication/notices?category=all&status=all&q=&sort=postAt_desc&page=1&pageSize=10&counts=1" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Accept: application/json"
-echo
 
-# Get one
+# B2) Get one
 curl -sS -X GET \
-  "${BASE}/api/v1/admin/communication/notices/${NOTICE_ID}" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/admin/communication/notices/{{NOTICE_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Accept: application/json"
-echo
 
-# Create (JSON)
+# B3) Create (JSON)
 curl -sS -X POST \
-  "${BASE}/api/v1/admin/communication/notices" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/admin/communication/notices" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{
@@ -173,12 +182,11 @@ curl -sS -X POST \
     "expiresAt": "2026-04-15T23:59:59.999Z",
     "target": "teachers"
   }'
-echo
 
-# Create (multipart)
+# B4) Create (multipart)
 curl -sS -X POST \
-  "${BASE}/api/v1/admin/communication/notices" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/admin/communication/notices" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Accept: application/json" \
   -F "title=With file" \
   -F "category=Notice" \
@@ -188,54 +196,40 @@ curl -sS -X POST \
   -F "postAt=2026-03-28T06:00:00.000Z" \
   -F "expiresAt=2026-05-01T23:59:59.999Z" \
   -F "target=all" \
-  -F "attachment=@${ATTACHMENT_FILE};type=application/pdf"
-echo
+  -F "attachment=@{{ATTACHMENT_FILE}};type=application/pdf"
 
-# Update (PATCH)
+# B5) Update (PATCH)
 curl -sS -X PATCH \
-  "${BASE}/api/v1/admin/communication/notices/${NOTICE_ID}" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/admin/communication/notices/{{NOTICE_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{"title":"Quick edit","content":"<p>Edited</p>"}'
-echo
 
-# Update (PUT — same handler)
+# B6) Update (PUT)
 curl -sS -X PUT \
-  "${BASE}/api/v1/admin/communication/notices/${NOTICE_ID}" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/admin/communication/notices/{{NOTICE_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Content-Type: application/json" \
   -H "Accept: application/json" \
   -d '{"status":"draft"}'
-echo
 
-# Delete
+# B7) Delete
 curl -sS -X DELETE \
-  "${BASE}/api/v1/admin/communication/notices/${NOTICE_ID}" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/admin/communication/notices/{{NOTICE_ID}}" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Accept: application/json"
-echo
 
-# Attachment download
+# B8) Download attachment
 curl -sS -L -X GET \
-  "${BASE}/api/v1/admin/communication/notices/${NOTICE_ID}/attachment" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/admin/communication/notices/{{NOTICE_ID}}/attachment" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -o "admin-notice-attachment"
-echo "Saved attachment to ./admin-notice-attachment"
 
-# Publish
+# B9) Publish
 curl -sS -X POST \
-  "${BASE}/api/v1/admin/communication/notices/${NOTICE_ID}/publish" \
-  -H "Authorization: Bearer ${TOKEN}" \
+  "{{BASE}}/api/v1/admin/communication/notices/{{NOTICE_ID}}/publish" \
+  -H "Authorization: Bearer {{TOKEN}}" \
   -H "Accept: application/json"
-echo
 
-# =============================================================================
-# Reference
-# =============================================================================
-# Categories: Academic, Events, Maintenance, Arts, Finance, Notice, Training
-# Write statuses: draft, active, scheduled
-# List status filter: all | draft | active | scheduled | expired
-# Sort: postAt_desc | postAt_asc
-# Max attachment: NOTICE_MAX_ATTACHMENT_BYTES env or 25 MB default
-# Allowed types: PDF, DOC/DOCX, PNG, JPEG
+CURL_REFERENCE
