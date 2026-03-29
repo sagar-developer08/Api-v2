@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect, requireApprovedSchool } = require('../middleware/auth');
 const ctrl = require('../controllers/adminAppController');
 const ext = require('../controllers/adminExtendedController');
+const attendanceApi = require('../controllers/adminAttendanceController');
 const noticeBoardCtrl = require('../controllers/noticeBoardController');
 const {
   listQuery,
@@ -155,6 +156,13 @@ router.get('/subjects/:subjectId/reports', ext.getSubjectReports);
 // 7. ATTENDANCE
 // ============================================
 router.get('/attendance', ctrl.getAttendance);
+router.get('/attendance/summary', attendanceApi.getSummary);
+router.get('/attendance/matrix', attendanceApi.getMatrix);
+router.get('/attendance/day', attendanceApi.getDay);
+router.put('/attendance/day', attendanceApi.putDay);
+router.get('/attendance/staff-day', attendanceApi.getStaffDay);
+router.put('/attendance/staff-day', attendanceApi.putStaffDay);
+router.get('/attendance/reports/monthly', attendanceApi.getMonthlyReport);
 router.get('/attendance/config', ext.getAttendanceConfig);
 router.put('/attendance/config', ext.updateAttendanceConfig);
 router.get('/attendance/teachers', ext.getTeacherAttendance);

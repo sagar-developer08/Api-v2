@@ -4,7 +4,7 @@ const staffAttendanceSchema = new mongoose.Schema({
   schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
   staffId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', required: true },
   date: { type: Date, required: true },
-  status: { type: String, enum: ['present', 'absent', 'late', 'half_day', 'early_exit'], default: 'present' },
+  status: { type: String, enum: ['present', 'absent', 'late', 'excused', 'half_day', 'early_exit'], default: 'present' },
   checkInTime: { type: String, trim: true },
   checkOutTime: { type: String, trim: true },
   shift: { type: String, trim: true }

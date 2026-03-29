@@ -20,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 // Routes ...
 app.use('/api/v1/auth', require('./routes/authRoutes'));
 app.use('/api/v1/schools', require('./routes/schoolRoutes'));
+app.use('/api/v1/schools', require('./routes/schoolAttendanceRoutes'));
 app.use('/api/v1/schools', require('./routes/schoolNoticeRoutes'));
 app.use('/api/admin/classes', require('./routes/classRoutes'));
 app.use('/api/academic/teachers', require('./routes/teacherRoutes'));
