@@ -7,6 +7,7 @@ const docsApi = require('../controllers/adminDocsApiController');
 const attendanceApi = require('../controllers/adminAttendanceController');
 const noticeBoardCtrl = require('../controllers/noticeBoardController');
 const orgStructure = require('../controllers/orgStructureController');
+const schoolShell = require('../controllers/schoolShellController');
 const {
   listQuery,
   noticeIdParam,
@@ -28,6 +29,12 @@ router.get('/designations', orgStructure.listDesignations);
 router.post('/designations', orgStructure.createDesignation);
 router.patch('/designations/:designationId', orgStructure.patchDesignation);
 router.delete('/designations/:designationId', orgStructure.deleteDesignation);
+
+// Branch & academic year switcher (JWT school; same handlers as /api/v1/schools/:schoolId/...)
+router.get('/school/branches', schoolShell.listSchoolBranches);
+router.get('/school/academic-years', schoolShell.listSchoolAcademicYears);
+router.get('/school/context', schoolShell.getSchoolContext);
+router.patch('/school/preferences', schoolShell.patchSchoolPreferences);
 
 // ============================================
 // 1. DASHBOARD

@@ -8,6 +8,11 @@ const academicYearSchema = new mongoose.Schema({
     ref: 'School',
     required: true
   },
+  referenceAcademicYearId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ReferenceAcademicYear',
+    default: null
+  },
   branchId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Branch',

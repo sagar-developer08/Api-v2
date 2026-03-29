@@ -11,8 +11,11 @@ const branchSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
-  city: { type: String, trim: true },
-  isMain: { type: Boolean, default: false }
+  code: { type: String, trim: true, default: '' },
+  city: { type: String, trim: true, default: '' },
+  address: { type: String, trim: true, default: '' },
+  isMain: { type: Boolean, default: false },
+  isDefault: { type: Boolean, default: false }
 }, { timestamps: true });
 
 branchSchema.index({ schoolId: 1 });

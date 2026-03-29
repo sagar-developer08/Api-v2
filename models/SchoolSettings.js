@@ -25,6 +25,10 @@ const schoolSettingsSchema = new mongoose.Schema({
   notifications: {
     emailEnabled: { type: Boolean, default: true },
     smsEnabled: { type: Boolean, default: false }
+  },
+  uiPreferences: {
+    currentBranchId: { type: mongoose.Schema.Types.ObjectId, ref: 'Branch', default: null },
+    currentAcademicYearId: { type: mongoose.Schema.Types.ObjectId, ref: 'AcademicYear', default: null }
   }
 }, { timestamps: true });
 

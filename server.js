@@ -21,11 +21,13 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes ...
 app.use('/api/v1/auth', require('./routes/authRoutes'));
+app.use('/api/v1/reference', require('./routes/referenceRoutes'));
 app.use('/api/v1/schools', require('./routes/schoolRoutes'));
 app.use('/api/v1/schools', require('./routes/schoolAttendanceRoutes'));
 app.use('/api/v1/schools', require('./routes/schoolStaffModuleRoutes'));
 app.use('/api/v1/schools', require('./routes/schoolNoticeRoutes'));
 app.use('/api/v1/schools', require('./routes/schoolOrgRoutes'));
+app.use('/api/v1/schools', require('./routes/schoolShellRoutes'));
 app.use('/api/admin/classes', require('./routes/classRoutes'));
 app.use('/api/academic/teachers', require('./routes/teacherRoutes'));
 app.use('/api/academic', require('./routes/academicRoutes'));
