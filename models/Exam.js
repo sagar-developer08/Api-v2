@@ -77,7 +77,22 @@ const examSchema = new mongoose.Schema({
     resultsPublished: {
         type: Boolean,
         default: false
-    }
+    },
+    examTimetable: [{
+        examDate: Date,
+        startTime: String,
+        endTime: String,
+        subjectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subject' },
+        classId: { type: mongoose.Schema.Types.ObjectId, ref: 'Class' },
+        room: String,
+        instructions: String
+    }],
+    subjectMappingOverride: [{
+        classId: { type: mongoose.Schema.Types.ObjectId, ref: 'Class' },
+        subjectId: { type: mongoose.Schema.Types.ObjectId, ref: 'Subject' },
+        maxMarks: Number,
+        passMarks: Number
+    }]
 }, { timestamps: true });
 
 examSchema.index({ schoolId: 1, classId: 1 });

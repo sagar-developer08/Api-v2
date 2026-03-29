@@ -29,11 +29,12 @@ const studentCommunicationSchema = new mongoose.Schema({
     studentId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Student',
-        required: true
+        required: false,
+        default: null
     },
     type: {
         type: String,
-        enum: ['sms', 'email', 'notification', 'whatsapp'],
+        enum: ['sms', 'email', 'notification', 'whatsapp', 'fee_reminder', 'attendance_alert', 'in_app'],
         required: true
     },
     subject: {
@@ -42,7 +43,7 @@ const studentCommunicationSchema = new mongoose.Schema({
     },
     message: {
         type: String,
-        required: true,
+        default: '',
         trim: true
     },
     sentAt: {

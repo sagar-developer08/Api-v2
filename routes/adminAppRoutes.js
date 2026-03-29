@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect, requireApprovedSchool } = require('../middleware/auth');
 const ctrl = require('../controllers/adminAppController');
 const ext = require('../controllers/adminExtendedController');
+const docsApi = require('../controllers/adminDocsApiController');
 const attendanceApi = require('../controllers/adminAttendanceController');
 const noticeBoardCtrl = require('../controllers/noticeBoardController');
 const {
@@ -21,6 +22,8 @@ router.use(require('./adminStaffModuleRoutes'));
 // 1. DASHBOARD
 // ============================================
 router.get('/dashboard/stats', ctrl.getDashboardStats);
+router.get('/dashboard', docsApi.getDashboardBundle);
+router.get('/dashboard/kpis', docsApi.getDashboardBundle);
 
 // ============================================
 // 2. SCHOOL PROFILE
@@ -227,7 +230,11 @@ router.get('/admissions/enquiries', ext.listEnquiries);
 router.post('/admissions/enquiries', ext.createEnquiry);
 router.get('/admissions/enquiries/:id', ext.getEnquiry);
 router.put('/admissions/enquiries/:id', ext.updateEnquiry);
+router.get('/admissions/applications/stats', ext.getApplicationStats);
+router.post('/admissions/applications', ext.createApplication);
 router.get('/admissions/applications', ext.listApplications);
+router.patch('/admissions/applications/:id', ext.patchApplication);
+router.post('/admissions/applications/:id/timeline', ext.appendApplicationTimeline);
 router.get('/admissions/applications/:id', ext.getApplication);
 router.put('/admissions/applications/:id/status', ext.updateApplicationStatus);
 router.post('/admissions/enquiries/:id/convert', ext.convertEnquiryToApplication);
@@ -335,6 +342,10 @@ router.get('/communication/sms/balance', ext.getSmsBalance);
 // 14. REPORTS
 // ============================================
 router.post('/reports/generate', ext.generateReport);
+router.get('/reports/catalog', docsApi.getReportCatalog);
+router.post('/reports/:reportId/preview', docsApi.previewReport);
+router.post('/reports/:reportId/jobs', docsApi.createReportJob);
+router.get('/reports/jobs/:jobId', docsApi.getReportJob);
 router.get('/reports/:reportId/status', ext.getReportStatus);
 router.get('/reports/:reportId/download', ext.downloadReport);
 router.get('/reports/types', ext.getReportTypes);
@@ -349,5 +360,94 @@ router.put('/reports/scheduled/:id/cancel', ext.cancelScheduledReport);
 // ============================================
 router.get('/settings', ctrl.getSettings);
 router.put('/settings', ctrl.updateSettings);
+router.get('/settings/school', docsApi.getSchoolSettingsSlice);
+router.patch('/settings/school', docsApi.patchSchoolSettingsSlice);
+router.get('/users/me/preferences', docsApi.getUserPreferences);
+router.patch('/users/me/preferences', docsApi.patchUserPreferences);
+
+// ============================================
+// Academic years (docs)
+// ============================================
+router.get('/academic-years', docsApi.listAcademicYears);
+router.post('/academic-years', docsApi.createAcademicYear);
+router.get('/academic-years/:id', docsApi.getAcademicYear);
+router.patch('/academic-years/:id', docsApi.patchAcademicYear);
+router.post('/academic-years/:id/set-current', docsApi.setCurrentAcademicYear);
+router.delete('/academic-years/:id', docsApi.deleteAcademicYear);
+
+// ============================================
+// Calendar (docs)
+// ============================================
+router.get('/calendar/events/summary', docsApi.calendarEventsSummary);
+router.get('/calendar/events', docsApi.listCalendarEvents);
+router.post('/calendar/events', docsApi.createCalendarEvent);
+router.get('/calendar/events/:id', docsApi.getCalendarEvent);
+router.patch('/calendar/events/:id', docsApi.patchCalendarEvent);
+router.delete('/calendar/events/:id', docsApi.deleteCalendarEvent);
+
+// ============================================
+// RBAC (docs)
+// ============================================
+router.get('/rbac/roles', docsApi.listRbacRoles);
+router.post('/rbac/roles', docsApi.createRbacRole);
+router.patch('/rbac/roles/:id', docsApi.patchRbacRole);
+router.delete('/rbac/roles/:id', docsApi.deleteRbacRole);
+router.get('/rbac/roles/:id/permissions', docsApi.getRolePermissions);
+router.put('/rbac/roles/:id/permissions', docsApi.putRolePermissions);
+router.get('/rbac/role-assignments', docsApi.listRoleAssignments);
+router.post('/rbac/role-assignments', docsApi.createRoleAssignment);
+router.patch('/rbac/role-assignments/:id', docsApi.patchRoleAssignment);
+router.delete('/rbac/role-assignments/:id', docsApi.deleteRoleAssignment);
+
+// ============================================
+// Finance (docs-aligned paths)
+// ============================================
+router.get('/finance/fee-types', docsApi.listFeeTypes);
+router.post('/finance/fee-types', docsApi.createFeeType);
+router.patch('/finance/fee-types/:id', docsApi.patchFeeType);
+router.delete('/finance/fee-types/:id', docsApi.deleteFeeType);
+router.get('/finance/fee-structure', docsApi.listFeeStructure);
+router.post('/finance/fee-structure', docsApi.upsertFeeStructureRow);
+router.patch('/finance/fee-structure/:id', docsApi.patchFeeStructureRow);
+router.delete('/finance/fee-structure/:id', docsApi.deleteFeeStructureRow);
+router.get('/finance/fees/summary', docsApi.financeFeesSummary);
+router.get('/finance/fees/ledger', docsApi.financeFeesLedger);
+router.get('/finance/reimbursements', docsApi.listReimbursements);
+router.post('/finance/reimbursements', docsApi.createReimbursement);
+router.patch('/finance/reimbursements/:id', docsApi.patchReimbursement);
+router.get('/finance/expenses', docsApi.listExpenseEntries);
+router.post('/finance/expenses', docsApi.createExpenseEntry);
+
+// ============================================
+// Exams (extended — docs)
+// ============================================
+router.get('/exams/:examId/subject-mapping', docsApi.getExamSubjectMapping);
+router.put('/exams/:examId/subject-mapping', docsApi.putExamSubjectMapping);
+router.get('/exams/:examId/exam-timetable', docsApi.getExamTimetable);
+router.patch('/exams/:examId/exam-timetable', docsApi.patchExamTimetable);
+router.get('/exams/:examId/marks', docsApi.getExamMarksGrid);
+router.patch('/exams/:examId/marks', docsApi.patchExamMarks);
+router.get('/exams/:examId/analytics', docsApi.getExamAnalytics);
+router.get('/grade-scales', docsApi.listGradeScales);
+router.post('/grade-scales', docsApi.createGradeScale);
+router.patch('/grade-scales/:id', docsApi.patchGradeScale);
+router.delete('/grade-scales/:id', docsApi.deleteGradeScale);
+
+// ============================================
+// Class timetable — periods & weekly grid (docs)
+// ============================================
+router.get('/timetable-periods', docsApi.listPeriodTemplates);
+router.post('/timetable-periods', docsApi.createPeriodTemplate);
+router.patch('/timetable-periods/:id', docsApi.patchPeriodTemplate);
+router.delete('/timetable-periods/:id', docsApi.deletePeriodTemplate);
+router.get('/class-timetables', docsApi.getClassWeeklyTimetable);
+router.put('/class-timetables', docsApi.putClassWeeklyTimetable);
+
+// ============================================
+// Communication (docs — extra)
+// ============================================
+router.post('/communication/messages', docsApi.postCommunicationMessage);
+router.get('/communication/notifications', docsApi.getCommunicationNotifications);
+router.get('/communication/communication-log', docsApi.getCommunicationLog);
 
 module.exports = router;

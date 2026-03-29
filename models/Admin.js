@@ -51,6 +51,10 @@ const adminSchema = new mongoose.Schema({
   },
   lastLogin: {
     type: Date
+  },
+  preferences: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
   }
 }, {
   timestamps: true

@@ -1,0 +1,88 @@
+{
+  "description": "cURL examples for Vidhyadhan APIs. Replace BASE_URL (default http://localhost:3000) and TOKEN with a school-admin JWT from POST /api/v1/auth/login.",
+  "variables": {
+    "BASE_URL": "http://localhost:3000",
+    "TOKEN": "YOUR_ADMIN_JWT",
+    "SCHOOL_ID": "replace_if_needed",
+    "STUDENT_ID": "replace",
+    "CLASS_ID": "replace",
+    "EXAM_ID": "replace"
+  },
+  "requests": [
+    { "group": "Health", "name": "Health check", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/health\"" },
+    { "group": "Auth", "name": "Admin login", "curl": "curl -s -X POST \"${BASE_URL:-http://localhost:3000}/api/v1/auth/login\" -H \"Content-Type: application/json\" -d '{\"email\":\"admin@school.com\",\"password\":\"secret\",\"schoolCode\":\"DEMO\"}'" },
+    { "group": "Auth", "name": "Get profile", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/auth/profile\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Auth", "name": "Change password", "curl": "curl -s -X POST \"${BASE_URL:-http://localhost:3000}/api/v1/auth/change-password\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -d '{\"currentPassword\":\"old\",\"newPassword\":\"newpass12\"}'" },
+
+    { "group": "Admin dashboard", "name": "Dashboard stats (legacy)", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/dashboard/stats\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Admin dashboard", "name": "Dashboard bundle (KPIs + charts + events)", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/dashboard\" -H \"Authorization: Bearer $TOKEN\"" },
+
+    { "group": "Academic years", "name": "List academic years", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/academic-years\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Academic years", "name": "Create academic year", "curl": "curl -s -X POST \"${BASE_URL:-http://localhost:3000}/api/v1/admin/academic-years\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -d '{\"name\":\"2025-2026\",\"startDate\":\"2025-04-01\",\"endDate\":\"2026-03-31\",\"status\":\"Draft\"}'" },
+    { "group": "Academic years", "name": "Set current year", "curl": "curl -s -X POST \"${BASE_URL:-http://localhost:3000}/api/v1/admin/academic-years/YEAR_ID/set-current\" -H \"Authorization: Bearer $TOKEN\"" },
+
+    { "group": "Calendar", "name": "List events (month)", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/calendar/events?year=2026&month=3\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Calendar", "name": "Events summary chips", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/calendar/events/summary?year=2026&month=3\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Calendar", "name": "Create event", "curl": "curl -s -X POST \"${BASE_URL:-http://localhost:3000}/api/v1/admin/calendar/events\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -d '{\"title\":\"PTM\",\"category\":\"academic\",\"startAt\":\"2026-03-15T10:00:00.000Z\",\"allDay\":false}'" },
+
+    { "group": "Admissions", "name": "Applications stats", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/admissions/applications/stats\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Admissions", "name": "List applications", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/admissions/applications?page=1&pageSize=20&status=pending\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Admissions", "name": "Create application", "curl": "curl -s -X POST \"${BASE_URL:-http://localhost:3000}/api/v1/admin/admissions/applications\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -d '{\"source\":\"Website\",\"student\":{\"firstName\":\"A\",\"lastName\":\"B\",\"classApplied\":\"Grade 5\"},\"parent\":{\"fatherName\":\"P\"},\"academic\":{}}'" },
+    { "group": "Admissions", "name": "Patch application", "curl": "curl -s -X PATCH \"${BASE_URL:-http://localhost:3000}/api/v1/admin/admissions/applications/APP_ID\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -d '{\"status\":\"approved\"}'" },
+
+    { "group": "Attendance", "name": "Summary", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/attendance/summary?from=2026-03-01&to=2026-03-31&cohort=students\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Attendance", "name": "Matrix", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/attendance/matrix?classId=$CLASS_ID&from=2026-03-01&to=2026-03-07\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Attendance", "name": "Day roster", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/attendance/day?date=2026-03-15&classId=$CLASS_ID\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Attendance", "name": "Put day marks", "curl": "curl -s -X PUT \"${BASE_URL:-http://localhost:3000}/api/v1/admin/attendance/day\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -d '{\"date\":\"2026-03-15\",\"classId\":\"CLASS_ID\",\"sectionId\":null,\"entries\":[{\"studentId\":\"SID\",\"status\":\"present\"}]}'" },
+
+    { "group": "Classes (admin app)", "name": "List classes", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/classes\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Classes (legacy path)", "name": "List classes", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/admin/classes\" -H \"Authorization: Bearer $TOKEN\"" },
+
+    { "group": "Sections", "name": "List sections", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/sections?classId=$CLASS_ID\" -H \"Authorization: Bearer $TOKEN\"" },
+
+    { "group": "Students", "name": "List students (admin)", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/students?page=1&limit=20\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Students", "name": "List students (api/admin)", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/admin/students?page=1&limit=20\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Students", "name": "Student metrics", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/admin/students/metrics\" -H \"Authorization: Bearer $TOKEN\"" },
+
+    { "group": "Teachers", "name": "List teachers", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/teachers\" -H \"Authorization: Bearer $TOKEN\"" },
+
+    { "group": "Subjects", "name": "List subjects", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/subjects\" -H \"Authorization: Bearer $TOKEN\"" },
+
+    { "group": "Timetable", "name": "List slots", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/timetable\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Timetable", "name": "Period templates", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/timetable-periods?academicYearId=\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Timetable", "name": "Class weekly grid", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/class-timetables?classId=$CLASS_ID&academicYearId=\" -H \"Authorization: Bearer $TOKEN\"" },
+
+    { "group": "Exams", "name": "List exams", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/exams\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Exams", "name": "Subject mapping", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/exams/$EXAM_ID/subject-mapping\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Exams", "name": "Exam session timetable", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/exams/$EXAM_ID/exam-timetable\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Exams", "name": "Marks grid", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/exams/$EXAM_ID/marks?classId=$CLASS_ID\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Exams", "name": "Analytics", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/exams/$EXAM_ID/analytics\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Exams", "name": "Grade scales", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/grade-scales\" -H \"Authorization: Bearer $TOKEN\"" },
+
+    { "group": "Finance", "name": "Fee types", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/finance/fee-types\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Finance", "name": "Fee structure rows", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/finance/fee-structure?academicYearId=\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Finance", "name": "Fees summary", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/finance/fees/summary?academicYearId=\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Finance", "name": "Fees ledger", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/finance/fees/ledger?page=1&pageSize=20\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Finance (fees module)", "name": "Fee heads", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/fees/heads\" -H \"Authorization: Bearer $TOKEN\"" },
+
+    { "group": "Communication", "name": "Notices list", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/communication/notices?page=1&pageSize=20\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Communication", "name": "Send message", "curl": "curl -s -X POST \"${BASE_URL:-http://localhost:3000}/api/v1/admin/communication/messages\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -d '{\"channel\":\"email\",\"subject\":\"Hi\",\"body\":\"Test\",\"audience\":{\"type\":\"parents\"}}'" },
+    { "group": "Communication", "name": "Communication log", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/communication/communication-log\" -H \"Authorization: Bearer $TOKEN\"" },
+
+    { "group": "Reports", "name": "Catalog", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/reports/catalog\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Reports", "name": "Preview report", "curl": "curl -s -X POST \"${BASE_URL:-http://localhost:3000}/api/v1/admin/reports/student_directory/preview\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -d '{\"filters\":{},\"limit\":20}'" },
+    { "group": "Reports", "name": "Async job", "curl": "curl -s -X POST \"${BASE_URL:-http://localhost:3000}/api/v1/admin/reports/fee_outstanding/jobs\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -d '{\"format\":\"pdf\",\"filters\":{}}'" },
+
+    { "group": "RBAC", "name": "List roles", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/rbac/roles\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "RBAC", "name": "Role assignments", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/rbac/role-assignments\" -H \"Authorization: Bearer $TOKEN\"" },
+
+    { "group": "Settings", "name": "General settings", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/settings\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Settings", "name": "School slice", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/settings/school\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "Settings", "name": "User preferences", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/admin/users/me/preferences\" -H \"Authorization: Bearer $TOKEN\"" },
+
+    { "group": "School profile", "name": "School profile (v1 school)", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/school/profile\" -H \"Authorization: Bearer $TOKEN\"" },
+    { "group": "School profile", "name": "Setup wizard", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/schools/$SCHOOL_ID/setup-wizard\" -H \"Authorization: Bearer $TOKEN\"" },
+
+    { "group": "Staff HR", "name": "Staff list", "curl": "curl -s \"${BASE_URL:-http://localhost:3000}/api/v1/staff\" -H \"Authorization: Bearer $TOKEN\"" }
+  ]
+}

@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const ACADEMIC_YEAR_STATUS = ['Active', 'Inactive'];
+const ACADEMIC_YEAR_STATUS = ['Draft', 'Active', 'Closed', 'Inactive'];
 
 const academicYearSchema = new mongoose.Schema({
   schoolId: {
@@ -11,13 +11,15 @@ const academicYearSchema = new mongoose.Schema({
   branchId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Branch',
-    required: true
+    required: false,
+    default: null
   },
   label: {
     type: String,
     required: true,
     trim: true
   },
+  name: { type: String, trim: true },
   startYear: { type: Number, required: true },
   endYear: { type: Number, required: true },
   startDate: { type: Date, default: null },
@@ -27,7 +29,8 @@ const academicYearSchema = new mongoose.Schema({
     enum: ACADEMIC_YEAR_STATUS,
     default: 'Active'
   },
-  isDefault: { type: Boolean, default: false }
+  isDefault: { type: Boolean, default: false },
+  isCurrent: { type: Boolean, default: false }
 }, { timestamps: true });
 
 academicYearSchema.index({ schoolId: 1 });

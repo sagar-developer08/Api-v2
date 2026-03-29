@@ -337,21 +337,213 @@ exports.updateEnquiry = async (req, res) => {
   }
 };
 
+const mapAdmissionStatusForApi = (s) => {
+  if (['submitted', 'under_review', 'pending'].includes(s)) return 'pending';
+  return s;
+};
+
+const mapApplicationToPayload = (doc) => {
+  if (!doc) return null;
+  return {
+    id: String(doc._id),
+    studentName: doc.studentName,
+    source: doc.source || 'Website',
+    status: mapAdmissionStatusForApi(doc.status),
+    submissionDate: (doc.submissionDate || doc.createdAt || new Date()).toISOString(),
+    remarks: doc.remarks || '',
+    student: doc.student || {},
+    parent: doc.parent || {},
+    academic: doc.academic || {},
+    documents: [],
+    timeline: doc.timeline || []
+  };
+};
+
 exports.listApplications = async (req, res) => {
   try {
     const schoolId = getSchoolId(req);
-    const { page = 1, limit = 10, status } = req.query;
+    const {
+      page = 1,
+      pageSize,
+      limit,
+      status,
+      search,
+      classApplied,
+      dateFrom,
+      dateTo
+    } = req.query;
+    const l = Math.min(100, parseInt(pageSize || limit || 10, 10) || 10);
     const filter = { schoolId };
-    if (status) filter.status = status;
-    const skip = (parseInt(page, 10) - 1) * (parseInt(limit, 10) || 10);
-    const l = Math.min(100, parseInt(limit, 10) || 10);
+    const and = [];
+    if (status) {
+      if (status === 'pending') {
+        and.push({ status: { $in: ['pending', 'submitted', 'under_review'] } });
+      } else if (status === 'approved') {
+        and.push({ status: { $in: ['approved', 'enrolled'] } });
+      } else {
+        and.push({ status });
+      }
+    }
+    if (search) {
+      and.push({
+        $or: [
+          { studentName: new RegExp(search, 'i') },
+          { 'student.firstName': new RegExp(search, 'i') },
+          { 'student.lastName': new RegExp(search, 'i') }
+        ]
+      });
+    }
+    if (and.length) filter.$and = and;
+    if (classApplied) filter.classApplied = new RegExp(`^${classApplied}$`, 'i');
+    if (dateFrom || dateTo) {
+      filter.createdAt = {};
+      if (dateFrom) filter.createdAt.$gte = new Date(dateFrom);
+      if (dateTo) filter.createdAt.$lte = new Date(dateTo);
+    }
+    const skip = (parseInt(page, 10) - 1) * l;
     const [data, total] = await Promise.all([
       AdmissionApplication.find(filter).populate('classId', 'name').sort({ createdAt: -1 }).skip(skip).limit(l).lean(),
       AdmissionApplication.countDocuments(filter)
     ]);
-    res.json({ success: true, data: { data, total, page: parseInt(page, 10) || 1, limit: l, totalPages: Math.ceil(total / l) } });
+    const items = data.map(mapApplicationToPayload);
+    res.json({
+      success: true,
+      data: { items, total, page: parseInt(page, 10) || 1, pageSize: l }
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error listing applications', error: error.message });
+  }
+};
+
+exports.getApplicationStats = async (req, res) => {
+  try {
+    const schoolId = getSchoolId(req);
+    const apps = await AdmissionApplication.find({ schoolId }).lean();
+    let totalApplications = apps.length;
+    let approved = 0;
+    let rejected = 0;
+    let pending = 0;
+    let draft = 0;
+    apps.forEach(a => {
+      if (a.status === 'approved' || a.status === 'enrolled') approved += 1;
+      else if (a.status === 'rejected') rejected += 1;
+      else if (a.status === 'draft') draft += 1;
+      else pending += 1;
+    });
+    const byMonth = {};
+    apps.forEach(a => {
+      const d = new Date(a.createdAt);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      byMonth[key] = (byMonth[key] || 0) + 1;
+    });
+    const monthlyTrend = Object.entries(byMonth).map(([month, count]) => ({ month, count }));
+    res.json({
+      success: true,
+      data: {
+        totalApplications,
+        approved,
+        rejected,
+        pending,
+        draft,
+        monthlyTrend,
+        funnel: [
+          { stage: 'Draft', count: draft },
+          { stage: 'Pending', count: pending },
+          { stage: 'Approved', count: approved },
+          { stage: 'Rejected', count: rejected }
+        ]
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error fetching stats', error: error.message });
+  }
+};
+
+exports.createApplication = async (req, res) => {
+  try {
+    const schoolId = getSchoolId(req);
+    const body = req.body;
+    const first = body.student?.firstName || 'Student';
+    const last = body.student?.lastName || '';
+    const studentName = `${first} ${last}`.trim();
+    const timeline = [
+      {
+        status: body.status || 'draft',
+        title: 'Application created',
+        by: req.admin?.fullName || 'Admin',
+        at: new Date(),
+        note: ''
+      }
+    ];
+    const app = await AdmissionApplication.create({
+      schoolId,
+      studentName,
+      source: body.source || 'Website',
+      status: body.status || 'draft',
+      student: body.student || {},
+      parent: body.parent || {},
+      academic: body.academic || {},
+      classApplied: body.student?.classApplied || body.classApplied,
+      classId: body.classId,
+      remarks: body.remarks,
+      submissionDate: new Date(),
+      timeline
+    });
+    const full = await AdmissionApplication.findById(app._id).lean();
+    res.status(201).json({ success: true, data: mapApplicationToPayload(full) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error creating application', error: error.message });
+  }
+};
+
+exports.patchApplication = async (req, res) => {
+  try {
+    const schoolId = getSchoolId(req);
+    const existing = await AdmissionApplication.findOne({ _id: req.params.id, schoolId });
+    if (!existing) return res.status(404).json({ success: false, message: 'Application not found' });
+    const updates = { ...req.body };
+    delete updates.id;
+    if (updates.status && updates.status !== existing.status) {
+      const tl = existing.timeline || [];
+      tl.push({
+        status: updates.status,
+        title: 'Status updated',
+        by: req.admin?.fullName || 'Admin',
+        at: new Date(),
+        note: updates.remarks || ''
+      });
+      updates.timeline = tl;
+    }
+    if (updates.student?.firstName || updates.student?.lastName) {
+      const s = updates.student || existing.student || {};
+      updates.studentName = `${s.firstName || ''} ${s.lastName || ''}`.trim() || existing.studentName;
+    }
+    const app = await AdmissionApplication.findOneAndUpdate({ _id: req.params.id, schoolId }, updates, { new: true }).lean();
+    res.json({ success: true, data: mapApplicationToPayload(app) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error updating application', error: error.message });
+  }
+};
+
+exports.appendApplicationTimeline = async (req, res) => {
+  try {
+    const schoolId = getSchoolId(req);
+    const { title, note, status } = req.body;
+    const app = await AdmissionApplication.findOne({ _id: req.params.id, schoolId });
+    if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
+    const tl = app.timeline || [];
+    tl.push({
+      status: status || app.status,
+      title: title || 'Update',
+      by: req.admin?.fullName || 'Admin',
+      at: new Date(),
+      note: note || ''
+    });
+    app.timeline = tl;
+    await app.save();
+    res.status(201).json({ success: true, data: mapApplicationToPayload(app.toObject()) });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Error appending timeline', error: error.message });
   }
 };
 
@@ -360,7 +552,7 @@ exports.getApplication = async (req, res) => {
     const schoolId = getSchoolId(req);
     const app = await AdmissionApplication.findOne({ _id: req.params.id, schoolId }).populate('classId enquiryId').lean();
     if (!app) return res.status(404).json({ success: false, message: 'Application not found' });
-    res.json({ success: true, data: app });
+    res.json({ success: true, data: mapApplicationToPayload(app) });
   } catch (error) {
     res.status(500).json({ success: false, message: 'Error fetching application', error: error.message });
   }

@@ -59,6 +59,8 @@ router.post(
 
 router.get('/profile', protect, authController.getProfile);
 
+router.post('/change-password', protect, authController.changePassword);
+
 router.post('/student-login', authController.studentLogin);
 
 router.post('/teacher-login', authController.teacherLogin);

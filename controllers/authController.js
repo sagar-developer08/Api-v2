@@ -461,3 +461,24 @@ exports.getProfile = async (req, res) => {
     });
   }
 };
+
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'currentPassword and newPassword required' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'newPassword must be at least 6 characters' });
+    }
+    const admin = await Admin.findById(req.admin._id).select('+password');
+    if (!admin) return res.status(404).json({ success: false, message: 'Admin not found' });
+    const ok = await admin.comparePassword(currentPassword);
+    if (!ok) return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+    admin.password = newPassword;
+    await admin.save();
+    res.json({ success: true, message: 'Password updated' });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
