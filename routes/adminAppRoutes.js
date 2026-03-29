@@ -15,6 +15,8 @@ const {
 router.use(protect);
 router.use(requireApprovedSchool);
 
+router.use(require('./adminStaffModuleRoutes'));
+
 // ============================================
 // 1. DASHBOARD
 // ============================================

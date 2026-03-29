@@ -4,7 +4,26 @@ const staffDocumentSchema = new mongoose.Schema({
   schoolId: { type: mongoose.Schema.Types.ObjectId, ref: 'School', required: true },
   staffId: { type: mongoose.Schema.Types.ObjectId, ref: 'Staff', required: true },
   name: { type: String, required: true, trim: true },
-  type: { type: String, trim: true, enum: ['id-proof', 'address-proof', 'qualification', 'experience', 'photograph', 'other'], default: 'other' },
+  type: {
+    type: String,
+    trim: true,
+    enum: [
+      'id-proof',
+      'address-proof',
+      'qualification',
+      'experience',
+      'photograph',
+      'other',
+      'Resume',
+      'Aadhaar Front',
+      'Aadhaar Back',
+      'PAN',
+      'Education Certificate',
+      'Experience Certificate',
+      'Other'
+    ],
+    default: 'Other'
+  },
   fileUrl: { type: String, required: true, trim: true },
   fileSize: { type: Number, default: 0 },
   mimeType: { type: String, trim: true },

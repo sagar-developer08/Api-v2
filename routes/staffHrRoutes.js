@@ -59,16 +59,4 @@ router.post('/training/sessions', ctrl.createTrainingSession);
 router.get('/training/sessions/:sessionId/records', ctrl.getTrainingRecords);
 router.post('/training/attendance', ctrl.markTrainingAttendance);
 
-router.get('/', ctrl.listStaff);
-router.get('/:id', ctrl.getStaff);
-router.post('/', ctrl.createStaff);
-router.put('/:id', ctrl.updateStaff);
-router.delete('/:id', ctrl.deleteStaff);
-router.get('/:id/documents', ctrl.getStaffDocuments);
-router.post('/:id/documents', ctrl.uploadStaffDocument);
-router.get('/:id/qualifications', ctrl.getStaffQualifications);
-router.post('/:id/qualifications', ctrl.addStaffQualification);
-router.get('/:id/reviews', ctrl.getPerformanceReviews);
-router.get('/:id/appraisals', ctrl.getStaffAppraisals);
-
 module.exports = router;
