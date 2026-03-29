@@ -25,6 +25,7 @@ app.use('/api/v1/schools', require('./routes/schoolRoutes'));
 app.use('/api/v1/schools', require('./routes/schoolAttendanceRoutes'));
 app.use('/api/v1/schools', require('./routes/schoolStaffModuleRoutes'));
 app.use('/api/v1/schools', require('./routes/schoolNoticeRoutes'));
+app.use('/api/v1/schools', require('./routes/schoolOrgRoutes'));
 app.use('/api/admin/classes', require('./routes/classRoutes'));
 app.use('/api/academic/teachers', require('./routes/teacherRoutes'));
 app.use('/api/academic', require('./routes/academicRoutes'));

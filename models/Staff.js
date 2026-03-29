@@ -32,6 +32,7 @@ const staffSchema = new mongoose.Schema({
   pincode: { type: String, trim: true, default: '' },
   photoUrl: { type: String, trim: true, default: '' },
   departmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
+  designationId: { type: mongoose.Schema.Types.ObjectId, ref: 'Designation', default: null },
   roleId: { type: mongoose.Schema.Types.ObjectId, ref: 'StaffRole' },
   designation: { type: String, trim: true, default: '' },
   joinDate: { type: Date, default: Date.now },

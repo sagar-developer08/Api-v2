@@ -6,6 +6,7 @@ const ext = require('../controllers/adminExtendedController');
 const docsApi = require('../controllers/adminDocsApiController');
 const attendanceApi = require('../controllers/adminAttendanceController');
 const noticeBoardCtrl = require('../controllers/noticeBoardController');
+const orgStructure = require('../controllers/orgStructureController');
 const {
   listQuery,
   noticeIdParam,
@@ -17,6 +18,16 @@ router.use(protect);
 router.use(requireApprovedSchool);
 
 router.use(require('./adminStaffModuleRoutes'));
+
+// Departments & designations (org structure — same handlers as /api/v1/schools/:schoolId/...)
+router.get('/departments', orgStructure.listDepartments);
+router.post('/departments', orgStructure.createDepartment);
+router.patch('/departments/:departmentId', orgStructure.patchDepartment);
+router.delete('/departments/:departmentId', orgStructure.deleteDepartment);
+router.get('/designations', orgStructure.listDesignations);
+router.post('/designations', orgStructure.createDesignation);
+router.patch('/designations/:designationId', orgStructure.patchDesignation);
+router.delete('/designations/:designationId', orgStructure.deleteDesignation);
 
 // ============================================
 // 1. DASHBOARD
