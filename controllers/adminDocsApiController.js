@@ -226,7 +226,7 @@ exports.calendarEventsSummary = async (req, res) => {
     const start = new Date(y, m, 1);
     const end = new Date(y, m + 1, 0, 23, 59, 59, 999);
     const agg = await CalendarEvent.aggregate([
-      { $match: { schoolId: mongoose.Types.ObjectId(schoolId), startAt: { $gte: start, $lte: end } } },
+      { $match: { schoolId: new mongoose.Types.ObjectId(schoolId), startAt: { $gte: start, $lte: end } } },
       { $group: { _id: '$category', count: { $sum: 1 } } }
     ]);
     const data = agg.map(a => ({ category: a._id, count: a.count }));
@@ -739,7 +739,7 @@ exports.getDashboardBundle = async (req, res) => {
     const attTotal = await StudentAttendance.countDocuments({ schoolId, date: { $gte: todayStart } });
     const attendanceTodayPercent = attTotal ? Math.round((attCount / attTotal) * 100) : null;
     const feeAgg = await StudentFee.aggregate([
-      { $match: { schoolId: mongoose.Types.ObjectId(schoolId) } },
+      { $match: { schoolId: new mongoose.Types.ObjectId(schoolId) } },
       { $group: { _id: null, pending: { $sum: '$pendingAmount' }, total: { $sum: '$amount' } } }
     ]);
     const pending = feeAgg[0]?.pending || 0;

@@ -74,7 +74,7 @@ exports.getDashboardStats = async (req, res) => {
         ]);
 
         const totalPendingFees = await StudentFee.aggregate([
-            { $match: { schoolId: mongoose.Types.ObjectId(schoolId), status: { $in: ['pending', 'partial', 'overdue'] } } },
+            { $match: { schoolId: new mongoose.Types.ObjectId(schoolId), status: { $in: ['pending', 'partial', 'overdue'] } } },
             { $group: { _id: null, total: { $sum: '$pendingAmount' } } }
         ]);
 
